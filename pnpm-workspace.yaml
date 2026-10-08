@@ -1,0 +1,15 @@
+packages:
+  - "."
+
+# تنظیمات pnpm — از pnpm 11 به بعد خانه تنظیمات این فایل است (نه package.json)
+
+trustLockfile: true
+
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  esbuild: true
+  core-js: true
+  sharp: true
+  unrs-resolver: true

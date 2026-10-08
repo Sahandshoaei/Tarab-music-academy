@@ -1,0 +1,688 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  سامانه مدیریت آموزشگاه موسیقی — اسکیمای دیتابیس (PostgreSQL + Prisma)
+//  فاز ۳: طراحی دیتابیس (ERD)
+//  مرجع: 01-project-proposal.md / 02-srs.md / 03-database-design.md
+// ───────────────────────────────────────────────────────────────────────────
+//  قراردادهای طراحی:
+//  • Soft Delete با فیلد isActive (F2-AC7, F3-AC4) — حذف فیزیکی ممنوع
+//  • زمان‌ها به فرمت رشته "HH:mm" (صفر-پر شده) — مقایسه رشته‌ای معادل مقایسه
+//    زمانی است و منطق تشخیص تداخل را ساده می‌کند
+//  • مبالغ به «تومان» و از نوع Int
+//  • نام جداول و ستون‌ها در دیتابیس snake_case (با @map)
+//  • مقادیر مشتق‌شده (نوع کلاس هنرجو، جلسات باقی‌مانده، وضعیت قسط و...)
+//    ذخیره نمی‌شوند — در لایه سرویس محاسبه می‌شوند
+//  • بخش MVP-2 (مالی) از الان در اسکیما هست تا فاز بعد نیازی به بازطراحی
+//    نباشد؛ قبل از پیاده‌سازی MVP-2 نیازمند جلسه طراحی تکمیلی است (SRS-F6)
+// ═══════════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═════════════════════════ Enums ═══════════════════════════════════════════
+
+/// نقش کاربر سیستم — TEACHER و STUDENT برای فازهای آینده (پنل استاد/هنرجو)
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+/// روزهای هفته (برای کلاس‌های تکرارشونده هفتگی و روزهای تعطیل)
+enum Weekday {
+  SATURDAY
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+}
+
+/// انواع کلاس (پروپوزال ۴.۱)
+enum ClassType {
+  PRIVATE // خصوصی — یک هنرجو
+  GROUP // گروهی
+  SEMI_GROUP // نیمه‌گروهی
+  PRACTICE // تمرینی
+}
+
+/// الگوی زمان‌بندی کلاس (SRS-F4)
+enum ScheduleType {
+  WEEKLY // تکرارشونده هفتگی — جلسات تا پایان ترم فعال تولید می‌شود
+  SINGLE // تک‌جلسه — تاریخ دلخواه ادمین، دقیقاً یک جلسه
+  AD_HOC // جلسه‌به‌جلسه — هر جلسه جداگانه ثبت می‌شود
+}
+
+/// وضعیت جلسه — «برگزار شده» مقادیر مشتق‌شده است: date < امروز ⇒ برگزار شده
+enum SessionStatus {
+  SCHEDULED // برنامه‌ریزی‌شده
+  CANCELLED // لغو‌شده (تک‌جلسه یا کل سری)
+}
+
+/// وضعیت حضور (SRS-F5) — «ثبت‌نشده» یعنی اصلاً رکوردی وجود ندارد
+enum AttendanceStatus {
+  PRESENT // حاضر
+  ABSENT // غایب
+  EXCUSED // موجه
+}
+
+/// نحوه آشنایی هنرجو با آموزشگاه (SRS-F2)
+enum ReferralSource {
+  FRIENDS // معرفی دوستان
+  INSTAGRAM // اینستاگرام
+  SIGN // تابلو
+  OTHER // سایر
+}
+
+/// روش پرداخت — 🟡 نیازمند تأیید نهایی در جلسه طراحی MVP-2
+enum InsuranceType {
+  TAMIN_EJTEMAEI // تامین اجتماعی
+  SALAMAT       // سلامت
+  OTHER         // سایر
+}
+
+enum PaymentMethod {
+  CASH // نقدی
+  CARD // کارت‌خوان / کارت‌به‌کارت
+  BANK_TRANSFER // انتقال بانکی
+  OTHER
+}
+
+// ═══════════════════ Auth — احراز هویت (F1) ═══════════════════════════════
+//  اسکیمای استاندارد Auth.js (NextAuth) + فیلدهای اختصاصی پروژه.
+//  با Credentials Provider (ایمیل/رمز) بخش Account/Session ممکن است بلافاصله
+//  استفاده نشود، ولی برای پشتیبانی آینده از Session دیتابیسی / OAuth نگه
+//  داشته شده‌اند. role و ارتباط Teacher/Student با User از الان تعریف شده تا
+//  افزودن پنل استاد/هنرجو در آینده بدون بازطراحی ممکن باشد (پروپوزال ۲.۴).
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+
+  /// هش رمز عبور (Argon2/Bcrypt) — برای ورود با ایمیل/رمز (F1)
+  passwordHash String? @map("password_hash")
+
+  role      Role     @default(ADMIN)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  accounts    Account[]
+  sessions    Session[]
+  teacher     Teacher? // اتصال اختیاری به پروفایل استاد — فاز آینده
+  student     Student? // اتصال اختیاری به پروفایل هنرجو — فاز آینده
+  attendances Attendance[] // حضور و غیاب‌هایی که این ادمین ثبت کرده
+  smsBatches  SmsBatch[] // دسته‌های پیامکی که این ادمین ارسال کرده (MVP-3)
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @map("refresh_token")
+  access_token      String? @map("access_token")
+  expires_at        Int?    @map("expires_at")
+  token_type        String? @map("token_type")
+  scope             String?
+  id_token          String? @map("id_token")
+  session_state     String? @map("session_state")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ═══════════════════ داده پایه — اشخاص و سازها (F2, F3) ═══════════════════
+
+/// ساز / رشته آموزشی — لیست توسط ادمین تعریف می‌شود (F3-AC2)
+model Instrument {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // مثل: گیتار، پیانو، ویولن، آواز، تنبک
+  sortOrder Int      @default(0) @map("sort_order") // ترتیب نمایش در فرم‌ها
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  teachers TeacherInstrument[]
+  students StudentInstrument[]
+  classes  Class[]
+
+  @@map("instruments")
+}
+
+/// استاد (F3) — Soft Delete با isActive
+model Teacher {
+  id       Int      @id @default(autoincrement())
+  fullName String   @map("full_name")
+  phone    String
+  notes    String?
+  isActive Boolean  @default(true) @map("is_active")
+
+  // ── پروفایل تکمیلی (فاز ۶ — قبل از MVP-2) ──
+  birthDate                DateTime?     @map("birth_date") @db.Date
+  resumeImageUrl           String?       @map("resume_image_url")
+  insuranceType            InsuranceType? @map("insurance_type")
+  insuranceNumber          String?       @map("insurance_number")
+  teachingExperienceYears  Int?          @map("teaching_experience_years")
+  teachingExperienceNote   String?       @map("teaching_experience_note")
+  isQualified              Boolean       @default(false) @map("is_qualified")
+  qualificationNote        String?       @map("qualification_note")
+  cardNumber               String?       @map("card_number") // ۱۶ رقم
+  sheba                    String?       @map("sheba") // IR + ۲۴ رقم
+
+  /// اتصال به حساب کاربری برای پنل استاد — فاز آینده (پروپوزال ۲.۴)
+  userId String? @unique @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user        User?               @relation(fields: [userId], references: [id])
+  instruments TeacherInstrument[]
+  classes     Class[]
+  receipts    TeacherReceipt[] // فیش‌های حقوق — تاریخچه اقساطی
+  sessions    ClassSession[] // جلساتی که این استاد عملاً در آن تدریس می‌کند
+
+  @@index([phone])
+  @@map("teachers")
+}
+
+/// هنرجو (F2) — Soft Delete با isActive (کد ملی یکتا: F2-AC3)
+model Student {
+  id            Int     @id @default(autoincrement())
+  fullName      String  @map("full_name")
+  nationalId    String  @unique @map("national_id")
+  phone         String // شماره تماس خود هنرجو
+  guardianPhone String  @map("guardian_phone") // شماره تماس یکی از اقوام نزدیک
+  address       String?
+
+  /// تاریخ ثبت‌نام — پیش‌فرض «امروز» در لایه اپلیکیشن تنظیم می‌شود
+  registrationDate DateTime @map("registration_date") @db.Date
+
+  referralSource ReferralSource? @map("referral_source")
+  referralNote   String?         @map("referral_note") // توضیح در صورت «سایر»
+  notes          String?
+  isActive       Boolean         @default(true) @map("is_active")
+
+  /// اتصال به حساب کاربری برای پنل هنرجو/والدین — فاز آینده
+  userId String? @unique @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// عکس امضای هنرجو — تک‌عکس (آپلود در پروفایل)
+  signatureImageUrl String? @map("signature_image_url")
+
+  user            User?               @relation(fields: [userId], references: [id])
+  instruments     StudentInstrument[]
+  enrollments     Enrollment[]
+  attendances     Attendance[]
+  tuitionPayments TuitionPayment[]
+  smsMessages     SmsMessage[] // MVP-3 — تاریخچه پیامک‌های هنرجو
+
+  // جستجوی لیست هنرجویان (F2-AC5) — برای جستجوی Contains در PostgreSQL
+  // ایندکس pg_trgm در مایگریشن اضافه شود (بخش ۷ سند طراحی)
+  @@index([fullName])
+  @@index([phone])
+  @@map("students")
+}
+
+/// جدول واسط استاد ↔ ساز — هر استاد یک یا چند ساز تدریس می‌کند (F3-AC1)
+model TeacherInstrument {
+  teacherId    Int      @map("teacher_id")
+  instrumentId Int      @map("instrument_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  teacher    Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, instrumentId])
+  @@map("teacher_instruments")
+}
+
+/// جدول واسط هنرجو ↔ ساز — هر هنرجو می‌تواند هم‌زمان چند ساز بیاموزد (F2-AC4)
+model StudentInstrument {
+  studentId    Int      @map("student_id")
+  instrumentId Int      @map("instrument_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, instrumentId])
+  @@map("student_instruments")
+}
+
+/// هزینه جانبی آموزشگاه (نظافت/برق/گاز/آب/اجاره/سایر) — ثبت دستی ادمین، در گزارشات مالی لحاظ می‌شود
+enum GeneralExpenseCategory {
+  CLEANING    // نظافت
+  ELECTRICITY // برق
+  GAS         // گاز
+  WATER       // آب
+  RENT        // اجاره
+  OTHER       // سایر
+}
+
+model GeneralExpense {
+  id        Int                     @id @default(autoincrement())
+  title     String
+  category  GeneralExpenseCategory  @default(OTHER)
+  amount    Int                     // تومان
+  paidAt    DateTime                @map("paid_at") @db.Date
+  note      String?
+  createdAt DateTime                @default(now()) @map("created_at")
+  updatedAt DateTime                @updatedAt @map("updated_at")
+
+  @@index([paidAt])
+  @@index([category])
+  @@map("general_expenses")
+}
+
+/// فیش پرداخت حقوق استاد — تاریخچه اقساطی (قبلاً StudentReceipt هم بود — در 20261004 حذف شد، جایش TuitionPayment آمد)
+model TeacherReceipt {
+  id        Int      @id @default(autoincrement())
+  teacherId Int      @map("teacher_id")
+  imageUrl  String   @map("image_url")
+  amount    Int                  // مبلغ به تومان
+  paidAt    DateTime @map("paid_at") @db.Date
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId])
+  @@map("teacher_receipts")
+}
+
+// ═══════════════════ ترم، اتاق و تنظیمات (F0) ═════════════════════════════
+
+/// ترم تحصیلی (F0) — بازه تولید جلسات کلاس‌های تکرارشونده
+model Term {
+  id        Int      @id @default(autoincrement())
+  name      String // مثل: «پاییز ۱۴۰۵»
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+
+  /// در هر لحظه حداکثر یک ترم فعال (F0-AC2) — با ایندکس یکتای جزئی
+  /// (Partial Unique Index) در مایگریشن اعمال می‌شود — سند طراحی بخش ۷
+  isActive  Boolean  @default(false) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  classes Class[]
+
+  @@map("terms")
+}
+
+/// اتاق فیزیکی آموزشگاه — تشخیص تداخل اتاق (پروپوزال ۴.۳ / F4-AC4)
+model Room {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // مثل: «اتاق ۱»
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  classes  Class[] // اتاق پیش‌فرض سری کلاس
+  sessions ClassSession[] // اتاق واقعی هر جلسه (قابل بازنویسی)
+
+  @@map("rooms")
+}
+
+/// تنظیمات آموزشگاه — تک‌ردیفی (همیشه id = 1)
+///  ساعت کاری و روزهای تعطیل به‌جای Hardcode در کد، اینجا نگهداری می‌شوند
+///  ⚠️ بین دو سند ناسازگاری هست (۰۹:۰۰ در SRS-F4 در برابر ۱۶:۰۰ در
+///  پروپوزال §۸) — پیش‌فرض طبق SRS؛ ادمین می‌تواند تغییر دهد.
+model SchoolSettings {
+  id         Int     @id @default(1)
+  schoolName String? @map("school_name")
+  openTime   String  @default("09:00") @map("open_time")
+  closeTime  String  @default("21:00") @map("close_time")
+
+  /// روزهای تعطیل آموزشگاه — پیش‌فرض: پنجشنبه و جمعه
+  closedDays Weekday[] @default([THURSDAY, FRIDAY]) @map("closed_days")
+
+  // ── نرخ شهریه پیش‌فرض هر نوع کلاس (تومان) — تنظیمات مالی
+  privateRate   Int? @map("private_rate")
+  groupRate     Int? @map("group_rate")
+  semiGroupRate Int? @map("semi_group_rate")
+  practiceRate  Int? @map("practice_rate")
+
+  // ── سرویس پیامکی (F7 / MVP-3) — Adapter کاوه‌نگار/MOCK ──
+  /// شناسه Adapter سرویس‌دهنده — مثل "kavenegar" (طراحی مستقل از سرویس)
+  smsProvider          String?           @map("sms_provider")
+  /// 🔐 کلید API — فقط سمت سرور؛ در UI همیشه ماسک شود
+  smsApiKey            String?           @map("sms_api_key")
+  /// شماره خط ارسال
+  smsSenderLine        String?           @map("sms_sender_line")
+  /// شماره پیش‌فرض گیرنده: خود هنرجو یا قوم نزدیک
+  smsDefaultPhoneTarget SmsRecipientPhone @default(STUDENT) @map("sms_default_phone_target")
+
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("school_settings")
+}
+
+/// تعطیلات رسمی تقویم (بند ۱۰ مقررات) — تاریخ‌های ملی/مذهبی که جزو ۱۰ جلسه محسوب نمی‌شوند
+model Holiday {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @unique @db.Date
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([date])
+  @@map("holidays")
+}
+
+// ═══════════════ F4 — زمان‌بندی و برنامه کلاسی (فیچر هسته‌ای) ═══════════════
+
+/// کلاس = «سری/دوره» با ساختار ثابت (نوع، استاد، هنرجویان، ساز، اتاق پیش‌فرض)
+///  الگوی تکرار روی خود کلاس تعریف می‌شود؛ جلسات در ClassSession.
+model Class {
+  id           Int          @id @default(autoincrement())
+  title        String? // برچسب اختیاری برای نمایش — مثل «گیتار مقدماتی»
+  type         ClassType
+  scheduleType ScheduleType @map("schedule_type")
+
+  teacherId    Int @map("teacher_id") // دقیقاً یک استاد (پروپوزال ۴.۵)
+  roomId       Int @map("room_id") // اتاق پیش‌فرض سری
+  instrumentId Int @map("instrument_id") // سازِ این کلاس (F3-AC3)
+  termId       Int @map("term_id") // کلاس به ترم تعلق دارد
+
+  // ── فقط برای WEEKLY/SINGLE (برای AD_HOC همیشه null — اعتبارسنجی در سرویس) ──
+  weekday   Weekday?
+  startTime String?  @map("start_time") // "HH:mm"
+  endTime   String?  @map("end_time") // "HH:mm"
+
+  /// غیرفعال = لغو کل سری کلاس (Soft Delete)
+  isActive  Boolean  @default(true) @map("is_active")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  teacher                Teacher                     @relation(fields: [teacherId], references: [id])
+  room                   Room                        @relation(fields: [roomId], references: [id])
+  instrument             Instrument                  @relation(fields: [instrumentId], references: [id])
+  term                   Term                        @relation(fields: [termId], references: [id])
+  sessions               ClassSession[]
+  enrollments            Enrollment[]
+  tuitionAllocations TuitionPaymentAllocation[]
+
+  @@index([teacherId])
+  @@index([roomId])
+  @@index([termId])
+  @@index([scheduleType])
+  @@map("classes")
+}
+
+/// جلسه = یک رخداد واقعی تقویمی (تولیدشده از سری تکرارشونده یا ثبت دستی)
+/// roomId و teacherId عمداً از کلاس «غیرنرمال» شده‌اند: امکان جابه‌جایی
+/// تک‌جلسه (F4-AC7) + تشخیص تداخل با یک کوئری روی همین جدول.
+model ClassSession {
+  id      Int      @id @default(autoincrement())
+  classId Int      @map("class_id")
+  date    DateTime @db.Date
+
+  startTime String @map("start_time") // "HH:mm"
+  endTime   String @map("end_time") // "HH:mm"
+
+  roomId    Int @map("room_id") // اتاق این جلسه (پیش‌فرض از کلاس)
+  teacherId Int @map("teacher_id") // استاد این جلسه (پیش‌فرض از کلاس)
+
+  status SessionStatus @default(SCHEDULED)
+
+  /// آیا این جلسه به‌صورت دستی از الگوی سری منحرف شده؟ (F4-AC7)
+  /// برای جلوگیری از بازنویسی هنگام بازتولید جلسات سری
+  isOverridden Boolean @default(false) @map("is_overridden")
+
+  notes     String? // مثلاً دلیل لغو
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  class      Class        @relation(fields: [classId], references: [id], onDelete: Restrict)
+  room       Room         @relation(fields: [roomId], references: [id])
+  teacher    Teacher      @relation(fields: [teacherId], references: [id])
+  attendance Attendance[]
+
+  // ایندکس‌های تشخیص تداخل (F4-AC3/AC4) و تقویم (F4-AC6)
+  @@index([date])
+  @@index([roomId, date])
+  @@index([teacherId, date])
+  @@index([classId, date])
+  @@map("class_sessions")
+}
+
+/// ثبت‌نام هنرجو در کلاس (رابطه چند‌به‌چند Class ↔ Student)
+///  خروج هنرجو از کلاس = isActive=false (سابقه حفظ می‌شود)
+model Enrollment {
+  id         Int      @id @default(autoincrement())
+  classId    Int      @map("class_id")
+  studentId  Int      @map("student_id")
+  isActive   Boolean  @default(true) @map("is_active")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Restrict)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@unique([classId, studentId])
+  @@index([studentId])
+  @@map("enrollments")
+}
+
+// ═══════════════════ F5 — حضور و غیاب ═════════════════════════════════════
+
+/// وضعیت حضور هر هنرجو در هر جلسه (F5) — نبودِ رکورد = «ثبت‌نشده» (F5-AC4)
+///  ثبت فقط برای جلسات گذشته مجاز است (F5-AC2) — اعتبارسنجی در سرویس.
+model Attendance {
+  id           Int              @id @default(autoincrement())
+  sessionId    Int              @map("session_id")
+  studentId    Int              @map("student_id")
+  status       AttendanceStatus
+  note         String? // توضیح غیبت موجه
+  /// کدام ادمین ثبت کرده (audit) — اختیاری
+  recordedById String?          @map("recorded_by_id")
+  recordedAt   DateTime         @default(now()) @map("recorded_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  session    ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student    Student      @relation(fields: [studentId], references: [id])
+  recordedBy User?        @relation(fields: [recordedById], references: [id])
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+  @@map("attendances")
+}
+
+// ═══════════════════ مالی — شهریه انعطاف‌پذیر (بدون اقساط) ═══════════════════
+
+/// پرداخت شهریه هنرجو — هر مبلغی، با رسید الزامی، تخصیص دستی به کلاس‌ها
+model TuitionPayment {
+  id              Int      @id @default(autoincrement())
+  studentId       Int      @map("student_id")
+  amount          Int // تومان
+  paidAt          DateTime @map("paid_at") @db.Date
+  receiptImageUrl String   @map("receipt_image_url")
+  note            String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  student     Student                     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  allocations TuitionPaymentAllocation[]
+
+  @@index([studentId])
+  @@map("tuition_payments")
+}
+
+/// تخصیص پرداخت به کلاس — انتخاب دستی ادمین برای هر کلاس (چند انتخابی)
+model TuitionPaymentAllocation {
+  paymentId Int @map("payment_id")
+  classId   Int @map("class_id")
+  amount    Int // سهم این کلاس از پرداخت
+
+  payment TuitionPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  class   Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([paymentId, classId])
+  @@map("tuition_payment_allocations")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ⚠️ MVP-3 — سرویس پیامکی (F7) — از الان در اسکیما هست تا بعداً بازطراحی
+//  لازم نشود؛ پیاده‌سازی و مایگریشن در فاز MVP-3 (پس از MVP-2).
+//  مرجع کامل: 05-sms-feature.md
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// وضعیت چرخه حیات پیامک — PENDING → SENT → DELIVERED (یا FAILED)
+enum SmsStatus {
+  PENDING // در صف ارسال
+  SENT // به اپراتور تحویل شد
+  DELIVERED // به گوشی گیرنده رسید (بر اساس گزارش سرویس‌دهنده)
+  FAILED // خطا در ارسال/تحویل
+}
+
+/// شیوه انتخاب گیرندگان یک ارسال
+enum SmsAudienceType {
+  INDIVIDUAL // تک‌تک (جستجو و انتخاب دستی)
+  CLASS // هنرجوهای یک کلاس
+  INSTRUMENT // هنرجوهای یک ساز
+  ALL_ACTIVE // همه هنرجوهای فعال
+  DYNAMIC // فیلتر هوشمند (غایبان امروز، بدهکاران، بدون کلاس فعال)
+}
+
+/// شماره‌ای که پیام به آن ارسال می‌شود
+enum SmsRecipientPhone {
+  STUDENT // شماره تماس خود هنرجو
+  GUARDIAN // شماره تماس قوم نزدیک
+}
+
+/// قالب پیامک — «عنوان‌های مختلف» = قالب‌ها (مثل: اطلاع غیبت، یادآوری کلاس)
+model SmsTemplate {
+  id        Int      @id @default(autoincrement())
+  title     String   @unique // عنوان قالب — مثل «اطلاع غیبت»
+  body      String // متن قالب با متغیرها مثل {نام هنرجو} و {نام کلاس}
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages SmsMessage[]
+
+  @@map("sms_templates")
+}
+
+/// دسته ارسال — هر عمل ارسال (حتی تک‌نفره) یک دسته است؛ audit یکنواخت
+model SmsBatch {
+  id          String         @id @default(cuid())
+  label       String // عنوان این ارسال — مثل «اطلاع غیبت — گیتار گروهی»
+  audienceType SmsAudienceType @map("audience_type")
+  audienceRef  String?        @map("audience_ref") // شرح گیرندگان — مثل «کلاس: گیتار گروهی»
+  totalCount   Int            @map("total_count")
+  sentById     String         @map("sent_by_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sentBy  User         @relation(fields: [sentById], references: [id])
+  messages SmsMessage[]
+
+  @@index([createdAt])
+  @@map("sms_batches")
+}
+
+/// پیامک ارسال‌شده به یک هنرجو — رکورد نهایی با Snapshot متن
+model SmsMessage {
+  id          Int              @id @default(autoincrement())
+  batchId     String           @map("batch_id")
+  studentId   Int              @map("student_id")
+
+  /// شماره‌ای که واقعاً ارسال شد (خود هنرجو یا قوم نزدیک)
+  phone       String
+  phoneTarget SmsRecipientPhone @map("phone_target")
+
+  templateId Int?              @map("template_id") // null = متن آزاد/ویرایش‌شده
+
+  /// Snapshot متن نهایی (متغیرها جایگزین‌شده) — قالب بعداً عوض شود، پیام
+  /// ارسال‌شده در تاریخچه نباید تغییر کند
+  body        String
+
+  status      SmsStatus        @default(PENDING)
+  /// شناسه پیام نزد سرویس‌دهنده — برای همگام‌سازی وضعیت تحویل
+  providerRef String?          @map("provider_ref")
+  errorMessage String?         @map("error_message")
+
+  sentAt      DateTime?        @map("sent_at")
+  deliveredAt DateTime?        @map("delivered_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  batch    SmsBatch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  student  Student     @relation(fields: [studentId], references: [id])
+  template SmsTemplate? @relation(fields: [templateId], references: [id])
+
+  // تاریخچه پیامک‌های هنرجو (F7-3-AC5) + یافتن ناموفق‌ها برای بازارسال
+  @@index([studentId, createdAt])
+  @@index([status])
+  @@map("sms_messages")
+}
+// ── سیستم نوتیفیکیشن داخل پنل — فقط ادمین (فاز جدید)
+enum NotificationType {
+  ABSENT
+  THREE_ABSENCES
+  OVERDUE
+  CLASS_CANCELLED
+  CLASS_MAKEUP
+  NEW_STUDENT
+  TERM_RENEWAL
+  DAILY_DIGEST
+  GENERAL
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+

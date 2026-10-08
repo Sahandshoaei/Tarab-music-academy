@@ -1,0 +1,1340 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>وایرفریم — سامانه مدیریت آموزشگاه موسیقی (MVP-1)</title>
+<style>
+/* ═══════════ وایرفریم کم‌دقت — فقط ساختار و جریان، بدون طراحی بصری ═══════════ */
+:root{
+  --bg:#f3f4f6; --panel:#ffffff; --line:#d1d5db; --line2:#e5e7eb;
+  --ink:#111827; --sub:#6b7280; --faint:#9ca3af;
+  --err-bg:#fef2f2; --err:#b91c1c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:"Vazirmatn",-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.7}
+button{font-family:inherit}
+
+/* ─── چیدمان کلی ─── */
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.sidebar{background:var(--panel);border-left:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+.main{min-width:0;padding:20px 28px 60px}
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.topbar h1{font-size:18px;font-weight:700}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ─── ناوبری ─── */
+.logo{display:flex;align-items:center;gap:10px;padding:6px 8px 14px;border-bottom:1px solid var(--line2);margin-bottom:12px}
+.logo .mark{width:36px;height:36px;border:1.5px dashed var(--faint);border-radius:8px;display:grid;place-items:center;font-size:16px;filter:grayscale(1);opacity:.75}
+.logo b{font-size:13px}
+.logo small{display:block;color:var(--sub);font-size:10.5px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:13.5px;margin-bottom:2px}
+.nav a .ic{filter:grayscale(1);opacity:.7;width:18px;text-align:center}
+.nav a:hover{background:var(--bg)}
+.nav a.act{background:var(--ink);color:#fff}
+.nav a.act .ic{opacity:1}
+.nav .sep{margin:12px 8px 6px;font-size:10.5px;color:var(--faint)}
+.userchip{margin-top:18px;padding-top:12px;border-top:1px solid var(--line2);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub)}
+.userchip .av{width:30px;height:30px;border-radius:50%;background:repeating-linear-gradient(45deg,#e5e7eb 0 4px,#f9fafb 4px 8px);border:1px solid var(--line)}
+
+/* ─── اجزای مشترک ─── */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+.card h3{font-size:14.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none;display:inline-block}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.sm{padding:4px 12px;font-size:12px}
+.btn.ghost{border-style:dashed;color:var(--sub)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.tag{border:1px solid var(--line);border-radius:99px;padding:1px 10px;font-size:10.5px;color:var(--sub);background:var(--panel)}
+.tag.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tag.fill{background:#e5e7eb}
+.errbox{border:1.5px solid var(--err);background:var(--err-bg);color:var(--err);border-radius:10px;padding:12px 14px;font-size:13px;margin:12px 0}
+.errbox b{display:block;margin-bottom:2px}
+.note{border:1.5px dashed var(--faint);border-radius:10px;padding:10px 14px;color:var(--sub);font-size:12.5px;margin:12px 0;background:#fafafa}
+.note b{color:var(--ink)}
+.ph{background:repeating-linear-gradient(45deg,#f3f4f6 0 8px,#e5e7eb 8px 16px);border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;color:var(--sub);font-size:11px}
+
+/* ─── فرم ─── */
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px}
+.fld label .req{color:var(--err)}
+.fld .hint{font-size:11px;color:var(--faint);margin-top:3px}
+.inp{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;background:#fafafa;color:var(--ink)}
+.inp::placeholder{color:var(--faint)}
+.fld .bad{border-color:var(--err);background:var(--err-bg)}
+.fld .err-t{color:var(--err);font-size:11px;margin-top:3px}
+fieldset{border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+legend{font-size:12px;font-weight:700;padding:0 8px}
+.checks{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+.checks label{display:flex;gap:5px;align-items:center;font-weight:400}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:7px 18px;font-size:13px;cursor:pointer;border-inline-start:1px solid var(--line)}
+.seg button:first-child{border-inline-start:0}
+.seg button.on{background:var(--ink);color:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:2px 10px;font-size:12px}
+.chip button{border:0;background:none;cursor:pointer;color:var(--sub);font-size:11px}
+
+/* ─── جدول ─── */
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+th{background:var(--bg);font-size:11.5px;color:var(--sub);text-align:right;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.st{display:inline-block;border-radius:99px;padding:0 10px;font-size:11px;border:1px solid}
+.st.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.st.off{border-color:var(--faint);color:var(--faint)}
+.st.mid{border-color:var(--faint);color:var(--sub);background:var(--bg)}
+
+/* ─── تقویم ─── */
+.cal-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.cal{display:grid;grid-template-columns:52px repeat(5,minmax(130px,1fr));min-width:760px}
+.cal-corner,.cal-head{background:var(--bg);border-bottom:1px solid var(--line);border-inline-start:1px solid var(--line2);font-size:12px;font-weight:700;padding:8px 4px;text-align:center}
+.cal-corner{font-size:10.5px;color:var(--sub)}
+.cal-times{display:grid;grid-template-rows:repeat(12,46px);border-inline-start:1px solid var(--line2)}
+.cal-times div{border-bottom:1px solid var(--line2);font-size:10.5px;color:var(--sub);display:flex;align-items:flex-start;justify-content:center;padding-top:3px}
+.cal-day{position:relative;border-inline-start:1px solid var(--line2);
+  background:repeating-linear-gradient(to bottom,transparent 0 45px,var(--line2) 45px 46px);height:552px}
+.evt{position:absolute;inset-inline:4px;border:1px solid var(--sub);border-radius:6px;background:#f9fafb;padding:3px 7px;font-size:10.5px;line-height:1.5;overflow:hidden;cursor:pointer}
+.evt b{font-size:11px;display:block}
+.evt small{color:var(--sub)}
+.evt.private{background:#e5e7eb}
+.evt.group{background:repeating-linear-gradient(45deg,#f9fafb 0 6px,#e5e7eb 6px 12px)}
+.evt.semi{border-style:dotted;border-width:2px}
+.evt.practice{border-style:dashed}
+.evt.canceled{opacity:.55;text-decoration:line-through}
+.cal-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--sub);margin-top:10px}
+.cal-legend i{display:inline-block;width:14px;height:14px;border:1px solid var(--sub);border-radius:4px;vertical-align:-3px;margin-inline-end:4px}
+
+/* ─── داشبورد ─── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stat small{color:var(--sub);font-size:11.5px;display:block}
+.stat b{font-size:22px}
+
+/* ─── حضور و غیاب ─── */
+.att-card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:12px 14px;margin-bottom:10px}
+.att-card .who{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.att-card .who b{font-size:13.5px}
+.att-card .who small{color:var(--sub)}
+.att-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.att-note{margin-top:8px}
+
+/* ─── مودال ─── */
+.modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;place-items:center;z-index:50;padding:16px}
+.modal.on{display:grid}
+.modal .box{background:var(--panel);border-radius:14px;max-width:430px;width:100%;padding:20px;border:1px solid var(--line)}
+.modal h3{font-size:15px;margin-bottom:10px}
+.modal .meta{font-size:12.5px;color:var(--sub);margin-bottom:14px;line-height:2}
+.modal .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+/* ─── صفحات standalone (لاگین/کاور) ─── */
+.page{display:none}
+.page.on{display:block}
+#page-login.on,#page-cover.on{display:grid;place-items:center;min-height:100vh;padding:24px}
+.login-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;width:100%;max-width:380px}
+.login-card .mark{width:52px;height:52px;border:1.5px dashed var(--faint);border-radius:12px;display:grid;place-items:center;margin:0 auto 14px;font-size:22px;filter:grayscale(1);opacity:.75}
+
+/* ─── کاور ─── */
+.cover{max-width:880px;width:100%}
+.cover .hero{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:26px 30px;margin-bottom:16px}
+.cover h2{font-size:20px;margin-bottom:4px}
+.cover p{color:var(--sub);font-size:13px}
+.mapgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.mapgrid a{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 12px;text-decoration:none;color:var(--ink);font-size:12.5px;display:block}
+.mapgrid a small{display:block;color:var(--faint);font-size:10.5px}
+.mapgrid a:hover{border-color:var(--ink)}
+.mapgrid a.star{border-width:2px}
+
+/* ─── یادداشت‌های وایرفریم ─── */
+details.wnotes{margin-top:14px;border:1px dashed var(--faint);border-radius:10px;background:#fafafa;padding:8px 14px}
+details.wnotes summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--sub)}
+details.wnotes ul{margin:8px 18px 6px 0;font-size:12px;color:var(--sub)}
+details.wnotes li{margin-bottom:3px}
+details.wnotes b{color:var(--ink)}
+
+/* ─── ریسپانسیو ─── */
+.menu-btn{display:none}
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;inset-inline-start:-240px;width:232px;z-index:40;transition:.2s}
+  .sidebar.open{inset-inline-start:0;box-shadow:0 0 0 100vmax rgba(17,24,39,.3)}
+  .menu-btn{display:inline-block}
+  .main{padding:14px 14px 50px}
+  .grid2,.grid3,.mapgrid{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+  .grid2,.grid3,.mapgrid{grid-template-columns:1fr}
+  .hide-m{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ صفحه ۱: کاور / راهنمای پروتوتایپ ═══════════════════════ -->
+<section class="page" id="page-cover">
+  <div class="cover">
+    <div class="hero">
+      <div class="row" style="justify-content:space-between">
+        <h2>وایرفریم MVP-1 — سامانه مدیریت آموزشگاه موسیقی</h2>
+        <span class="tag">فاز ۴ · نسخه ۱.۰</span>
+      </div>
+      <p>پروتوتایپ کم‌دقت (Lo-fi) — فقط ساختار، جریان‌ها و چیدمان اطلاعات. رنگ، فونت و جزئیات بصری در فاز پیاده‌سازی (shadcn/ui) اعمال می‌شوند.</p>
+      <div class="note" style="margin:14px 0 0">
+        <b>چطور تست کنم؟</b> از منوی کنار (یا نقشه صفحات پایین) بین صفحات جابه‌جا شو · در <b>تقویم</b> روی کلاس‌ها کلیک کن · در <b>فرم کلاس</b> سوییچ «تکرارشونده/جلسه‌ای» را عوض کن · اندازه پنجره را کوچک کن تا نمای موبایل را ببینی.
+      </div>
+    </div>
+    <div class="card">
+      <h3>🗺 نقشه صفحات MVP-1 (۱۳ صفحه)</h3>
+      <div class="mapgrid">
+        <a href="#/login">ورود <small>F1</small></a>
+        <a href="#/dashboard">داشبورد <small>جمع‌بندی روز</small></a>
+        <a href="#/calendar" class="star">تقویم هفتگی ⭐ <small>F4-AC6</small></a>
+        <a href="#/classes">لیست کلاس‌ها <small>F4</small></a>
+        <a href="#/class-form" class="star">فرم کلاس جدید ⭐ <small>F4-AC1..5</small></a>
+        <a href="#/session" class="star">جلسه + حضور و غیاب ⭐ <small>F5</small></a>
+        <a href="#/students">لیست هنرجویان <small>F2</small></a>
+        <a href="#/student-form">فرم هنرجو <small>F2</small></a>
+        <a href="#/student-profile">پروفایل هنرجو <small>F2-AC9</small></a>
+        <a href="#/teachers">لیست اساتید <small>F3</small></a>
+        <a href="#/teacher-form">فرم استاد <small>F3</small></a>
+        <a href="#/terms">ترم‌ها <small>F0</small></a>
+        <a href="#/catalog">سازها و اتاق‌ها <small>F3-AC2</small></a>
+        <a href="#/settings">تنظیمات <small>ساعات کاری</small></a>
+      </div>
+    </div>
+    <div class="card" style="border-style:dashed">
+      <h3>📲 MVP-3 — پیش‌نمایش سرویس پیامکی (F7) — پیاده‌سازی بعد از فاز مالی</h3>
+      <div class="mapgrid">
+        <a href="#/sms-compose" class="star">ارسال پیامک ⭐ <small>F7-2 · ۳ گام</small></a>
+        <a href="#/sms-templates">قالب‌های پیامک <small>F7-1 · عنوان‌ها</small></a>
+        <a href="#/sms-history">تاریخچه ارسال <small>F7-3 · وضعیت تحویل</small></a>
+        <a href="#/sms-history">اتصال سرویس‌دهنده <small>F7-4 · در صفحه تاریخچه</small></a>
+      </div>
+      <div class="note" style="margin:10px 0 0">این صفحات <b>خارج از بازبینی MVP-1</b> هستند — فقط برای اعتبارسنجی زودهنگام UX پیامک. جزئیات: <b>05-sms-feature.md</b></div>
+    </div>
+    <p style="text-align:center;color:var(--faint);font-size:11px">مرجع: 04-ux-wireframes.md · خروجی تصویری: پوشه wireframes/png</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════ صفحه ۲: ورود ═══════════════════════ -->
+<section class="page" id="page-login">
+  <div class="login-card">
+    <div class="mark">🎸</div>
+    <h2 style="text-align:center;font-size:17px;margin-bottom:2px">پنل مدیریت آموزشگاه</h2>
+    <p style="text-align:center;color:var(--sub);font-size:12px;margin-bottom:18px">برای ورود، ایمیل و رمز عبور را وارد کنید</p>
+    <div class="fld">
+      <label>ایمیل</label>
+      <input class="inp" type="text" placeholder="admin@school.example">
+    </div>
+    <div class="fld">
+      <label>رمز عبور</label>
+      <input class="inp" type="password" placeholder="••••••••">
+    </div>
+    <div class="errbox" id="login-err" style="display:none">
+      <b>اطلاعات ورود نادرست است</b>
+      پیام عمداً مشخص نمی‌کند ایمیل اشتباه است یا رمز — F1-AC2
+    </div>
+    <button class="btn primary" style="width:100%;margin-top:6px" onclick="document.getElementById('login-err').style.display='block'">ورود</button>
+    <p style="font-size:10.5px;color:var(--faint);text-align:center;margin-top:14px">نشست فقط با «خروج» منقضی می‌شود (F1-AC4)</p>
+    <p style="text-align:center;margin-top:12px"><a href="#/dashboard" style="font-size:12px;color:var(--sub)">↩ بازگشت به پروتوتایپ</a></p>
+  </div>
+</section>
+
+<!-- ═══════════════════════ بدنه اپ (سایدبار + صفحات) ═══════════════════════ -->
+<div class="app" id="chrome" style="display:none">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="mark">🎸</div>
+      <div><b>آموزشگاه موسیقی</b><small>پنل مدیریت — MVP-1</small></div>
+    </div>
+    <nav class="nav">
+      <a href="#/dashboard">🏠 <span class="ic">.</span> داشبورد</a>
+      <a href="#/calendar">📅 تقویم هفتگی</a>
+      <a href="#/classes">🎼 کلاس‌ها</a>
+      <div class="sep">اشخاص</div>
+      <a href="#/students">👥 هنرجویان</a>
+      <a href="#/teachers">🧑‍🏫 اساتید</a>
+      <div class="sep">سرویس پیامک · MVP-3</div>
+      <a href="#/sms-compose">📤 ارسال پیامک</a>
+      <a href="#/sms-templates">📝 قالب‌های پیامک</a>
+      <a href="#/sms-history">🕘 تاریخچه پیامک</a>
+      <div class="sep">پیکربندی</div>
+      <a href="#/terms">📆 ترم‌ها</a>
+      <a href="#/catalog">🎸 سازها و اتاق‌ها</a>
+      <a href="#/settings">⚙️ تنظیمات</a>
+    </nav>
+    <div class="userchip">
+      <div class="av"></div>
+      <div>مدیر آموزشگاه<br><small style="color:var(--faint)">admin@school.example</small></div>
+      <button class="btn sm" style="margin-inline-start:auto" onclick="location.hash='#/login'">خروج</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ═══════════ صفحه ۳: داشبورد ═══════════ -->
+    <section class="page" id="page-dashboard">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>داشبورد</h1>
+        <div class="tags"><span class="tag">شنبه ۱۲ مهر ۱۴۰۵</span><span class="tag dark">ترم فعال: پاییز ۱۴۰۵</span></div>
+      </header>
+
+      <div class="stats">
+        <div class="stat"><small>هنرجوی فعال</small><b>۴۸</b></div>
+        <div class="stat"><small>کلاس فعال در ترم</small><b>۱۲</b></div>
+        <div class="stat"><small>جلسات امروز</small><b>۵</b></div>
+        <div class="stat"><small>حضور و غیاب ثبت‌نشده</small><b>۲</b></div>
+      </div>
+
+      <div class="card">
+        <div class="between" style="margin-bottom:10px">
+          <h3 style="margin:0">📌 جلسات امروز</h3>
+          <a class="btn sm" href="#/calendar">نمایش تقویم هفتگی</a>
+        </div>
+        <div class="tblwrap">
+          <table>
+            <tr><th>ساعت</th><th>کلاس</th><th>نوع</th><th>استاد</th><th>اتاق</th><th>وضعیت</th><th></th></tr>
+            <tr><td>۱۰:۰۰–۱۱:۰۰</td><td>گیتار — خصوصی</td><td><span class="tag">خصوصی</span></td><td>استاد کریمی</td><td>اتاق ۱</td><td><span class="st mid">ثبت‌نشده</span></td><td><a class="btn sm" href="#/session">ثبت حضور</a></td></tr>
+            <tr><td>۱۱:۰۰–۱۲:۰۰</td><td>پیانو — خصوصی</td><td><span class="tag">خصوصی</span></td><td>استاد نوری</td><td>اتاق ۱</td><td><span class="st mid">ثبت‌نشده</span></td><td><a class="btn sm" href="#/session">ثبت حضور</a></td></tr>
+            <tr><td>۱۷:۰۰–۱۸:۳۰</td><td>گیتار — گروهی</td><td><span class="tag">گروهی</span></td><td>استاد کریمی</td><td>اتاق ۲</td><td><span class="st mid">در انتظار برگزاری</span></td><td><button class="btn sm" disabled>ثبت حضور</button></td></tr>
+            <tr><td>۱۸:۰۰–۱۹:۰۰</td><td>تمرین آزاد — سارا محمدی</td><td><span class="tag">تمرینی</span></td><td>استاد کریمی</td><td>اتاق ۳</td><td><span class="st mid">در انتظار برگزاری</span></td><td><button class="btn sm" disabled>ثبت حضور</button></td></tr>
+            <tr style="text-decoration:line-through;opacity:.55"><td>۱۹:۰۰–۲۰:۰۰</td><td>آواز — گروهی</td><td><span class="tag">گروهی</span></td><td>استاد صادقی</td><td>اتاق ۱</td><td><span class="st off">لغو شده</span></td><td>—</td></tr>
+          </table>
+        </div>
+        <div class="note">جلسات آینده دکمه «ثبت حضور» ندارند (F5-AC2) · جلسه لغوشده خط‌خورده باقی می‌ماند (F4-AC7)</div>
+      </div>
+
+      <div class="grid3">
+        <div class="card" style="margin:0">
+          <h3>⚡ دسترسی سریع</h3>
+          <div class="row">
+            <a class="btn" href="#/student-form">＋ هنرجوی جدید</a>
+            <a class="btn" href="#/class-form">＋ کلاس جدید</a>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <h3>📅 ترم فعال</h3>
+          <p style="font-size:13px"><b>پاییز ۱۴۰۵</b></p>
+          <p style="color:var(--sub);font-size:12px">۱ مهر تا ۳۰ دی · باقی‌مانده: ۱۴ هفته</p>
+          <a class="btn sm ghost" href="#/terms">مدیریت ترم‌ها</a>
+        </div>
+        <div class="card" style="margin:0">
+          <h3>🔔 یادآورها</h3>
+          <ul style="font-size:12.5px;color:var(--sub);margin-inline-start:16px">
+            <li>۲ جلسه دیروز بدون ثبت حضور و غیاب</li>
+            <li>ترم بعدی هنوز تعریف نشده</li>
+          </ul>
+        </div>
+      </div>
+
+      <details class="wnotes">
+        <summary>یادداشت‌های طراحی این صفحه</summary>
+        <ul>
+          <li><b>F1-AC3:</b> این صفحه و همه صفحات پشت احراز هویت‌اند — بدون نشست، ریدایرکت به صفحه ورود.</li>
+          <li>داشبورد عمداً حداقلی است: «امروز + کارهای معوق» — گزارش‌گیری پیشرفته طبق پروپوزال §۲.۴ خارج از MVP است.</li>
+          <li>«حضور و غیاب ثبت‌نشده» مهم‌ترین حلقه اپراتیوی روزانه ادمین است، بنابراین کارت آماری جدا دارد.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ═══════════ صفحه ۴: تقویم هفتگی ⭐ ═══════════ -->
+    <section class="page" id="page-calendar">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>تقویم هفتگی</h1>
+        <div class="tags"><span class="tag">F4-AC6</span><span class="tag">F4-AC7</span></div>
+      </header>
+
+      <div class="card">
+        <div class="between" style="margin-bottom:14px">
+          <div class="row">
+            <span style="font-size:13px;font-weight:700">هفته:</span>
+            <button class="btn sm">‹ قبلی</button>
+            <span class="tag dark">۱۲ تا ۱۷ مهر ۱۴۰۵</span>
+            <button class="btn sm">بعدی ›</button>
+            <button class="btn sm ghost">امروز</button>
+          </div>
+          <div class="row">
+            <select class="inp" style="width:auto"><option>همه اتاق‌ها</option><option>اتاق ۱</option><option>اتاق ۲</option><option>اتاق ۳</option></select>
+            <select class="inp" style="width:auto"><option>همه اساتید</option><option>استاد کریمی</option><option>استاد نوری</option><option>استاد صادقی</option></select>
+          </div>
+        </div>
+
+        <div class="cal-scroll">
+          <div class="cal">
+            <div class="cal-corner">ساعت</div>
+            <div class="cal-head">شنبه ۱۲</div>
+            <div class="cal-head">یکشنبه ۱۳</div>
+            <div class="cal-head">دوشنبه ۱۴</div>
+            <div class="cal-head">سه‌شنبه ۱۵</div>
+            <div class="cal-head">چهارشنبه ۱۶</div>
+
+            <div class="cal-times">
+              <div>۰۹:۰۰</div><div>۱۰:۰۰</div><div>۱۱:۰۰</div><div>۱۲:۰۰</div>
+              <div>۱۳:۰۰</div><div>۱۴:۰۰</div><div>۱۵:۰۰</div><div>۱۶:۰۰</div>
+              <div>۱۷:۰۰</div><div>۱۸:۰۰</div><div>۱۹:۰۰</div><div>۲۰:۰۰</div>
+            </div>
+
+            <!-- شنبه -->
+            <div class="cal-day">
+              <div class="evt private" style="top:46px;height:46px" onclick="openModal()"><b>گیتار — خصوصی</b><small>سارا محمدی · کریمی</small><small>اتاق ۱</small></div>
+              <div class="evt group" style="top:368px;height:69px" onclick="openModal()"><b>گیتار — گروهی</b><small>۴ هنرجو · کریمی</small><small>اتاق ۲</small></div>
+            </div>
+            <!-- یکشنبه -->
+            <div class="cal-day">
+              <div class="evt private" style="top:92px;height:46px" onclick="openModal()"><b>پیانو — خصوصی</b><small>علی رضایی · نوری</small><small>اتاق ۱</small></div>
+              <div class="evt practice" style="top:414px;height:46px" onclick="openModal()"><b>تمرین آزاد</b><small>مهدی توکلی</small><small>اتاق ۳</small></div>
+            </div>
+            <!-- دوشنبه -->
+            <div class="cal-day">
+              <div class="evt semi" style="top:69px;height:46px" onclick="openModal()"><b>ویولن — نیمه‌گروهی</b><small>۳ هنرجو · احمدی</small><small>اتاق ۲</small></div>
+              <div class="evt canceled" style="top:414px;height:46px" onclick="openModal()"><b>گیتار — خصوصی</b><small>لغو شده</small><small>اتاق ۲</small></div>
+            </div>
+            <!-- سه‌شنبه -->
+            <div class="cal-day">
+              <div class="evt group" style="top:368px;height:69px" onclick="openModal()"><b>آواز — گروهی</b><small>۵ هنرجو · صادقی</small><small>اتاق ۱</small></div>
+            </div>
+            <!-- چهارشنبه -->
+            <div class="cal-day">
+              <div class="evt private" style="top:22px;height:46px" onclick="openModal()"><b>پیانو — خصوصی</b><small>نگار حسینی · نوری</small><small>اتاق ۱</small></div>
+              <div class="evt private" style="top:460px;height:46px" onclick="openModal()"><b>گیتار — خصوصی</b><small>علی رضایی · کریمی</small><small>اتاق ۲</small></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cal-legend">
+          <span><i style="background:#e5e7eb"></i>خصوصی</span>
+          <span><i style="background:repeating-linear-gradient(45deg,#f9fafb 0 4px,#e5e7eb 4px 8px)"></i>گروهی</span>
+          <span><i style="border-style:dotted;border-width:2px"></i>نیمه‌گروهی</span>
+          <span><i style="border-style:dashed"></i>تمرینی</span>
+          <span><i style="opacity:.5"></i>لغو‌شده</span>
+          <span style="margin-inline-start:auto">🔒 پنجشنبه و جمعه نمایش داده نمی‌شوند (روز تعطیل)</span>
+        </div>
+        <div class="note">سطح جزئیات: بازه ۰۹:۰۰–۲۱:۰۰ از تنظیمات خوانده می‌شود · در موبایل، تقویم به‌صورت افقی اسکرول می‌شود و هر روز به‌صورت کارت لیستی نمایش داده می‌شود.</div>
+      </div>
+
+      <details class="wnotes">
+        <summary>یادداشت‌های طراحی این صفحه</summary>
+        <ul>
+          <li><b>F4-AC6:</b> جدول هفتگی با فیلتر «اتاق یا استاد» — ستون‌ها روزهای فعال هفته، سطرها ساعات کاری.</li>
+          <li>کلیک روی هر بلوک ← مودال جزئیات جلسه با اقدامات «ثبت حضور / ویرایش این جلسه / لغو این جلسه».</li>
+          <li>نوع کلاس با الگوی پرشدن کادر کدگذاری شده (نه رنگ) — در طرح نهایی با رنگ+آیکن جایگزین می‌شود.</li>
+          <li>جلسه لغوشده خط‌خورده می‌ماند تا سابقه حفظ شود (حذف فیزیکی ممنوع — تصمیم D5/D6 فاز ۳).</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ═══════════ صفحه ۵: لیست کلاس‌ها ═══════════ -->
+    <section class="page" id="page-classes">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>کلاس‌ها</h1>
+        <div class="tags"><span class="tag">F4</span></div>
+        <a class="btn primary" style="margin-inline-start:auto" href="#/class-form">＋ کلاس جدید</a>
+      </header>
+
+      <div class="card">
+        <div class="row" style="margin-bottom:12px">
+          <select class="inp" style="width:auto"><option>ترم: پاییز ۱۴۰۵ (فعال)</option></select>
+          <select class="inp" style="width:auto"><option>همه انواع</option><option>خصوصی</option><option>گروهی</option><option>نیمه‌گروهی</option><option>تمرینی</option></select>
+          <label class="checks" style="font-size:12.5px"><input type="checkbox" checked> فقط فعال‌ها</label>
+        </div>
+        <div class="tblwrap">
+          <table>
+            <tr><th>عنوان</th><th>نوع</th><th>استاد</th><th>ساز</th><th>برنامه</th><th>هنرجو</th><th>اتاق</th><th>وضعیت</th><th></th></tr>
+            <tr><td>گیتار — خصوصی</td><td><span class="tag">خصوصی</span></td><td>کریمی</td><td>گیتار</td><td>شنبه ۱۰:۰۰–۱۱:۰۰</td><td>سارا محمدی</td><td>اتاق ۱</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/class-form">ویرایش</a></td></tr>
+            <tr><td>گیتار — گروهی</td><td><span class="tag">گروهی</span></td><td>کریمی</td><td>گیتار</td><td>شنبه ۱۷:۰۰–۱۸:۳۰</td><td>۴ نفر</td><td>اتاق ۲</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/class-form">ویرایش</a></td></tr>
+            <tr><td>پیانو — خصوصی</td><td><span class="tag">خصوصی</span></td><td>نوری</td><td>پیانو</td><td>یکشنبه ۱۱:۰۰–۱۲:۰۰</td><td>علی رضایی</td><td>اتاق ۱</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/class-form">ویرایش</a></td></tr>
+            <tr><td>ویولن — نیمه‌گروهی</td><td><span class="tag">نیمه‌گروهی</span></td><td>احمدی</td><td>ویولن</td><td>دوشنبه ۱۰:۳۰–۱۱:۳۰</td><td>۳ نفر</td><td>اتاق ۲</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/class-form">ویرایش</a></td></tr>
+            <tr><td>آواز — گروهی</td><td><span class="tag">گروهی</span></td><td>صادقی</td><td>آواز</td><td>سه‌شنبه ۱۷:۰۰–۱۸:۳۰</td><td>۵ نفر</td><td>اتاق ۱</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/class-form">ویرایش</a></td></tr>
+            <tr style="opacity:.55"><td>سنتور — خصوصی</td><td><span class="tag">خصوصی</span></td><td>مرادی</td><td>سنتور</td><td>جلسه‌به‌جلسه</td><td>۲ نفر</td><td>اتاق ۳</td><td><span class="st off">لغو سری</span></td><td><button class="btn sm">فعال‌سازی</button></td></tr>
+          </table>
+        </div>
+        <div class="note">«لغو سری» = Soft Delete کلاس (فعال‌سازی مجدد ممکن است) · جلسات گذشته سری لغوشده دست‌نخورده می‌مانند.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۶: فرم کلاس جدید ⭐ ═══════════ -->
+    <section class="page" id="page-class-form">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>کلاس جدید</h1>
+        <div class="tags"><span class="tag">F4-AC1..AC5</span></div>
+      </header>
+
+      <div class="grid2" style="grid-template-columns:1.4fr 1fr;align-items:start">
+        <div class="card" style="margin:0">
+          <div class="fld">
+            <label>عنوان کلاس <span style="color:var(--faint);font-weight:400">(اختیاری — برای نمایش)</span></label>
+            <input class="inp" placeholder="مثلاً: گیتار کلاسیک — گروه مقدماتی">
+          </div>
+
+          <div class="fld">
+            <label>نوع کلاس <span class="req">*</span></label>
+            <div class="seg" id="classtype">
+              <button class="on" type="button">خصوصی</button>
+              <button type="button">گروهی</button>
+              <button type="button">نیمه‌گروهی</button>
+              <button type="button">تمرینی</button>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label>الگوی زمان‌بندی <span class="req">*</span></label>
+            <div class="seg" id="schedtype">
+              <button class="on" type="button" onclick="setSched(true)">تکرارشونده هفتگی</button>
+              <button type="button" onclick="setSched(false)">جلسه‌به‌جلسه</button>
+            </div>
+          </div>
+
+          <fieldset id="fs-weekly">
+            <legend>برنامه هفتگی (فقط برای تکرارشونده)</legend>
+            <div class="row">
+              <div class="fld" style="margin:0;flex:1">
+                <label>روز هفته <span class="req">*</span></label>
+                <select class="inp"><option>شنبه</option><option>یکشنبه</option><option>دوشنبه</option><option>سه‌شنبه</option><option>چهارشنبه</option></select>
+              </div>
+              <div class="fld" style="margin:0">
+                <label>ساعت شروع <span class="req">*</span></label>
+                <input class="inp" style="width:90px" value="۱۷:۰۰">
+              </div>
+              <div class="fld" style="margin:0">
+                <label>ساعت پایان <span class="req">*</span></label>
+                <input class="inp" style="width:90px" value="۱۸:۳۰">
+              </div>
+            </div>
+            <p class="hint">🔑 فقط روزهای شنبه تا چهارشنبه قابل انتخاب است (پنجشنبه/جمعه تعطیل — F4-AC5)</p>
+          </fieldset>
+
+          <div class="note" id="ad hoc-note" style="display:none">در حالت <b>جلسه‌به‌جلسه</b>، ساختار کلاس (استاد/ساز/هنرجویان) الان ثبت می‌شود و هر جلسه با تاریخ دلخواه جداگانه از تقویم یا همین صفحه اضافه می‌شود (F4-AC2).</div>
+
+          <div class="grid2">
+            <div class="fld">
+              <label>ساز / رشته <span class="req">*</span></label>
+              <select class="inp"><option>گیتار</option><option>پیانو</option><option>ویولن</option><option>آواز</option><option>تنبک</option><option>سنتور</option></select>
+            </div>
+            <div class="fld">
+              <label>استاد <span class="req">*</span></label>
+              <select class="inp"><option>استاد کریمی</option><option>استاد مرادی (سنتور)</option></select>
+              <p class="hint">فقط اساتیدِ سازِ انتخابی نمایش داده می‌شوند (F3-AC3)</p>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label>اتاق پیش‌فرض <span class="req">*</span></label>
+            <select class="inp"><option>اتاق ۲</option><option>اتاق ۱</option><option>اتاق ۳</option></select>
+          </div>
+
+          <div class="fld">
+            <label>هنرجویان <span class="req">*</span></label>
+            <input class="inp" placeholder="جستجوی هنرجو (فقط فعال‌ها — F2-AC8)…">
+            <div class="hint" style="margin:6px 0">انتخاب‌شده‌ها:</div>
+            <div class="chips">
+              <span class="chip">سارا محمدی <button type="button">×</button></span>
+              <span class="chip">علی رضایی <button type="button">×</button></span>
+              <span class="chip">نگار حسینی <button type="button">×</button></span>
+              <span class="chip">＋ افزودن</span>
+            </div>
+          </div>
+
+          <div class="errbox">
+            <b>⚠ تداخل زمانی detecting شد — ثبت ممکن نیست</b>
+            «اتاق ۲ · شنبه ۱۷:۰۰–۱۸:۳۰» با کلاس <b>گیتار گروهی (استاد کریمی)</b> هم‌پوشانی دارد.<br>
+            پیشنهاد: اتاق ۳ آزاد است · یا ساعت ۱۸:۳۰–۲۰:۰۰
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn primary">ثبت کلاس</button>
+            <a class="btn" href="#/classes">انصراف</a>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>👁 پیش‌نمایش جلسات (F4-AC1)</h3>
+            <p style="font-size:12.5px;color:var(--sub);margin-bottom:8px">بر اساس ترم فعال <b>پاییز ۱۴۰۵</b> (۱ مهر – ۳۰ دی):</p>
+            <div class="stat" style="border-style:dashed;margin-bottom:10px"><small>جلسات تولید می‌شود</small><b>۱۴ جلسه</b></div>
+            <ul style="font-size:12px;color:var(--sub);margin-inline-start:16px">
+              <li>اولین جلسه: شنبه ۱۲ مهر · ۱۷:۰۰</li>
+              <li>آخرین جلسه: شنبه ۲۸ دی · ۱۷:۰۰</li>
+              <li>۳ جلسه در روزهای تعطیل رسمی حذف می‌شود</li>
+            </ul>
+            <div class="note" style="margin-bottom:0">پیش از ثبت، همه ۱۴ جلسه از نظر تداخل اتاق/استاد بررسی می‌شوند (F4-AC3/AC4)</div>
+          </div>
+          <div class="card">
+            <h3>ℹ️ قواعد اعتبارسنجی</h3>
+            <ul style="font-size:12px;color:var(--sub);margin-inline-start:16px">
+              <li>بازه ساعت باید داخل ساعات کاری باشد (F4-AC5)</li>
+              <li>تکرارشونده فقط با ترم فعال (F0-AC3)</li>
+              <li>کلاس خصوصی = حداکثر ۱ هنرجو</li>
+              <li>ظرفیت گروهی در MVP محدود نمی‌شود (پروپوزال §۴.۶)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <details class="wnotes">
+        <summary>یادداشت‌های طراحی این صفحه</summary>
+        <ul>
+          <li><b>پیش‌نمایش جلسات</b> مهم‌ترین بخش فرم است: ادمین قبل از ثبت می‌بیند چه چیزی ساخته می‌شود — جلوگیری از خطای «ثبت کورکورانه».</li>
+          <li>خطای تداخل باید <b>خصوصی و قابل‌اقدام</b> باشد: کدام کلاس، کدام اتاق/استاد، و پیشنهاد جایگزین (F4-AC3/AC4).</li>
+          <li>سوییچ «تکرارشونده/جلسه‌ای» فرم را باز/بسته می‌کند — همان رفتار پیاده‌سازی می‌شود.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ═══════════ صفحه ۷: جلسه + حضور و غیاب ⭐ ═══════════ -->
+    <section class="page" id="page-session">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>جزئیات جلسه — ثبت حضور و غیاب</h1>
+        <div class="tags"><span class="tag">F5-AC1..AC4</span></div>
+      </header>
+
+      <div class="card">
+        <div class="between">
+          <div>
+            <h3 style="margin-bottom:4px">گیتار — گروهی</h3>
+            <p style="font-size:12.5px;color:var(--sub)">شنبه ۱۲ مهر ۱۴۰۵ · ۱۷:۰۰–۱۸:۳۰ · اتاق ۲ · استاد کریمی</p>
+          </div>
+          <div class="row">
+            <span class="st mid">برگزار شده</span>
+            <a class="btn sm" href="#/calendar">‹ بازگشت به تقویم</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="between" style="margin-bottom:14px">
+          <h3 style="margin:0">✅ وضعیت حضور هنرجویان <span class="tag">۴ هنرجو</span></h3>
+          <span style="font-size:12px;color:var(--sub)">۳ از ۴ ثبت شده · پیش‌فرض همه: «ثبت‌نشده» (F5-AC4)</span>
+        </div>
+
+        <div class="att-card">
+          <div class="who"><b>سارا محمدی</b><small>گیتار · ۰۹۱۲۱۲۳۴۵۶۷</small></div>
+          <div class="att-btns">
+            <div class="seg"><button class="on" type="button">حاضر</button><button type="button">غایب</button><button type="button">موجه</button></div>
+          </div>
+        </div>
+
+        <div class="att-card">
+          <div class="who"><b>علی رضایی</b><small>گیتار · ۰۹۳۵۱۱۱۲۲۳۳</small></div>
+          <div class="att-btns">
+            <div class="seg"><button type="button">حاضر</button><button class="on" type="button">غایب</button><button type="button">موجه</button></div>
+          </div>
+        </div>
+
+        <div class="att-card">
+          <div class="who"><b>نگار حسینی</b><small>گیتار · ۰۹۱۹۸۷۶۵۴۳۲</small></div>
+          <div class="att-btns">
+            <div class="seg"><button type="button">حاضر</button><button type="button">غایب</button><button class="on" type="button">موجه</button></div>
+          </div>
+          <div class="att-note"><input class="inp" placeholder="دلیل غیبت موجه (اختیاری)…" value="مسابقه مدرسه‌ای"></div>
+        </div>
+
+        <div class="att-card" style="border-style:dashed;background:#fafafa">
+          <div class="who"><b>مهدی توکلی</b><small>گیتار · ۰۹۱۲۳۳۳۴۴۵۵</small></div>
+          <div class="att-btns">
+            <div class="seg"><button type="button">حاضر</button><button type="button">غایب</button><button type="button">موجه</button></div>
+            <span class="tag">ثبت‌نشده</span>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px">
+          <button class="btn primary">ذخیره حضور و غیاب</button>
+          <button class="btn ghost">ثبت گروهی: همه حاضر</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🕘 اقدامات این جلسه (F4-AC7)</h3>
+        <div class="row">
+          <button class="btn">✏️ ویرایش این جلسه (جابه‌جایی زمان/اتاق — فقط همین جلسه)</button>
+          <button class="btn">✖ لغو این جلسه (بدون تأثیر بر بقیه سری)</button>
+        </div>
+        <div class="note" style="margin-bottom:0">جابه‌جایی/لغو تک‌جلسه روی الگوی هفتگی سری اثری ندارد — جلسه به‌عنوان «بازنویسی‌شده» علامت می‌خورد.</div>
+      </div>
+
+      <details class="wnotes">
+        <summary>یادداشت‌های طراحی این صفحه</summary>
+        <ul>
+          <li>هر هنرجو یک کارت مستقل با ۳ دکمه — در موبایل بدون جدول، راحت با انگشت قابل استفاده.</li>
+          <li>فیلد «دلیل» فقط با انتخاب «موجه» فعال می‌شود.</li>
+          <li>«ثبت گروهی: همه حاضر» برای سریع‌کردن کار روزمره ادمین (۴۰ جلسه در هفته).</li>
+          <li>جلسات آینده به این صفحه راه دارند اما دکمه‌های ثبت، غیرفعال‌اند (F5-AC2).</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ═══════════ صفحه ۸: لیست هنرجویان ═══════════ -->
+    <section class="page" id="page-students">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>هنرجویان</h1>
+        <div class="tags"><span class="tag">F2-AC5..AC8</span></div>
+        <a class="btn primary" style="margin-inline-start:auto" href="#/student-form">＋ هنرجوی جدید</a>
+      </header>
+
+      <div class="card">
+        <div class="row" style="margin-bottom:12px">
+          <input class="inp" style="max-width:340px" placeholder="🔍 جستجو: نام، شماره تماس، یا کد ملی…">
+          <label class="checks" style="font-size:12.5px"><input type="checkbox"> نمایش غیرفعال‌ها</label>
+          <span class="tag" style="margin-inline-start:auto">۴۸ هنرجوی فعال</span>
+        </div>
+        <div class="tblwrap">
+          <table>
+            <tr><th>نام و نام‌خانوادگی</th><th>کد ملی</th><th>تماس</th><th>ساز(ها)</th><th>تاریخ ثبت‌نام</th><th>وضعیت</th><th></th></tr>
+            <tr><td><a href="#/student-profile" style="color:inherit"><b>سارا محمدی</b></a></td><td>۰۰۱۲۳۴۵۶۷۸</td><td>۰۹۱۲۱۲۳۴۵۶۷</td><td><span class="chip">گیتار</span></td><td>۱۴۰۵/۰۴/۱۰</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/student-profile">مشاهده</a> <a class="btn sm" href="#/student-form">ویرایش</a></td></tr>
+            <tr><td><a href="#/student-profile" style="color:inherit"><b>علی رضایی</b></a></td><td>۰۰۲۳۴۵۶۷۸۹</td><td>۰۹۳۵۱۱۱۲۲۳۳</td><td><span class="chip">گیتار</span> <span class="chip">پیانو</span></td><td>۱۴۰۵/۰۵/۰۲</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/student-profile">مشاهده</a> <a class="btn sm" href="#/student-form">ویرایش</a></td></tr>
+            <tr><td><a href="#/student-profile" style="color:inherit"><b>نگار حسینی</b></a></td><td>۰۰۳۴۵۶۷۸۹۰</td><td>۰۹۱۹۸۷۶۵۴۳۲</td><td><span class="chip">آواز</span></td><td>۱۴۰۵/۰۵/۱۸</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/student-profile">مشاهده</a> <a class="btn sm" href="#/student-form">ویرایش</a></td></tr>
+            <tr style="opacity:.55"><td><b>مهدی توکلی</b></td><td>۰۰۴۵۶۷۸۹۰۱</td><td>۰۹۱۲۳۳۳۴۴۵۵</td><td><span class="chip">تنبک</span></td><td>۱۴۰۴/۱۱/۰۵</td><td><span class="st off">غیرفعال</span></td><td><button class="btn sm">فعال‌سازی</button></td></tr>
+          </table>
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:space-between">
+          <span style="font-size:12px;color:var(--sub)">نمایش ۱–۴ از ۴۸</span>
+          <div class="row"><button class="btn sm">‹ قبلی</button><button class="btn sm">بعدی ›</button></div>
+        </div>
+        <div class="note">غیرفعال‌سازی = Soft Delete (F2-AC7) · هنرجوی غیرفعال در فرم کلاس جدید ظاهر نمی‌شود (F2-AC8)</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۹: فرم هنرجو ═══════════ -->
+    <section class="page" id="page-student-form">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>ثبت هنرجوی جدید</h1>
+        <div class="tags"><span class="tag">F2-AC1..AC4</span></div>
+      </header>
+
+      <div class="card" style="max-width:720px">
+        <div class="grid2">
+          <div class="fld">
+            <label>نام و نام‌خانوادگی <span class="req">*</span></label>
+            <input class="inp" placeholder="مثلاً: سارا محمدی">
+          </div>
+          <div class="fld">
+            <label>کد ملی <span class="req">*</span></label>
+            <input class="inp bad" value="۰۰۱۲۳۴۵۶۷۸">
+            <p class="err-t">⚠ این کد ملی قبلاً ثبت شده است — «سارا محمدی» (F2-AC3)</p>
+          </div>
+          <div class="fld">
+            <label>شماره تماس خود هنرجو <span class="req">*</span></label>
+            <input class="inp" placeholder="۰۹۱۲ · · · · · · ·">
+          </div>
+          <div class="fld">
+            <label>شماره تماس قوم نزدیک <span class="req">*</span></label>
+            <input class="inp" placeholder="۰۹۱۲ · · · · · · ·">
+            <p class="hint">والد/همسر/… (نام او در فاز MVP ذخیره نمی‌شود)</p>
+          </div>
+        </div>
+
+        <div class="fld">
+          <label>آدرس <span style="color:var(--faint);font-weight:400">(اختیاری)</span></label>
+          <input class="inp" placeholder="تهران، …">
+        </div>
+
+        <div class="grid2">
+          <div class="fld">
+            <label>تاریخ ثبت‌نام <span class="req">*</span></label>
+            <input class="inp" value="۱۴۰۵/۰۶/۱۲ (امروز — پیش‌فرض)">
+          </div>
+          <div class="fld">
+            <label>نحوه آشنایی با آموزشگاه</label>
+            <select class="inp"><option>— انتخاب کنید —</option><option>معرفی دوستان</option><option>اینستاگرام</option><option>تابلو</option><option>سایر</option></select>
+          </div>
+        </div>
+
+        <div class="fld">
+          <label>ساز(های) آموزشی <span class="req">*</span> <span style="color:var(--faint);font-weight:400">(حداقل یکی — F2-AC4)</span></label>
+          <div class="chips">
+            <span class="chip">گیتار <button type="button">×</button></span>
+            <span class="chip">＋ افزودن ساز</span>
+          </div>
+        </div>
+
+        <div class="fld">
+          <label>یادداشت</label>
+          <textarea class="inp" rows="2" placeholder="اختیاری…"></textarea>
+        </div>
+
+        <div class="row">
+          <button class="btn primary">ثبت هنرجو</button>
+          <a class="btn" href="#/students">انصراف</a>
+        </div>
+        <div class="note" style="margin-bottom:0">وضعیت مالی هنرجو در MVP-1 وجود ندارد — در MVP-2 به پروفایل اضافه می‌شود (طبق SRS-F2).</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۰: پروفایل هنرجو ═══════════ -->
+    <section class="page" id="page-student-profile">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>پروفایل هنرجو</h1>
+        <div class="tags"><span class="tag">F2-AC9</span><span class="tag">F5-AC3</span></div>
+        <a class="btn" style="margin-inline-start:auto" href="#/student-form">✏️ ویرایش</a>
+      </header>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <div class="row">
+            <div class="ph" style="width:56px;height:56px;border-radius:50%">عکس</div>
+            <div>
+              <h3 style="margin:0">سارا محمدی</h3>
+              <p style="font-size:12px;color:var(--sub)">کد ملی ۰۰۱۲۳۴۵۶۷۸ · ثبت‌نام: ۱۴۰۵/۰۴/۱۰ · آشنایی: معرفی دوستان</p>
+            </div>
+          </div>
+          <span class="st on">فعال</span>
+        </div>
+        <div class="grid3" style="margin-top:14px">
+          <div class="stat" style="border-style:dashed"><small>تماس خودش</small><b style="font-size:15px">۰۹۱۲۱۲۳۴۵۶۷</b></div>
+          <div class="stat" style="border-style:dashed"><small>تماس قوم نزدیک</small><b style="font-size:15px">۰۹۱۲۹۹۸۸۷۷۶</b></div>
+          <div class="stat" style="border-style:dashed"><small>ساز(ها)</small><b style="font-size:15px">گیتار</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🎼 کلاس‌های فعال در ترم جاری <span class="tag">محاسبه‌شده خودکار — نه ورودی دستی</span></h3>
+        <div class="tblwrap">
+          <table>
+            <tr><th>کلاس</th><th>نوع</th><th>استاد</th><th>برنامه</th><th>گذشته</th><th>باقی‌مانده</th><th></th></tr>
+            <tr><td>گیتار — خصوصی</td><td><span class="tag">خصوصی</span></td><td>کریمی</td><td>شنبه ۱۰:۰۰</td><td>۸</td><td>۶</td><td><a class="btn sm" href="#/calendar">تقویم</a></td></tr>
+            <tr><td>گیتار — گروهی</td><td><span class="tag">گروهی</span></td><td>کریمی</td><td>شنبه ۱۷:۰۰</td><td>۵</td><td>۹</td><td><a class="btn sm" href="#/calendar">تقویم</a></td></tr>
+          </table>
+        </div>
+        <p style="font-size:12px;color:var(--sub);margin-top:8px">نوع کلاس‌های هنرجو: <b>خصوصی، گروهی</b> · کل جلسات باقی‌مانده ترم فعال: <b>۱۵</b> (F2-AC9 — مشتق از ثبت‌نام‌ها و تقویم ترم)</p>
+      </div>
+
+      <div class="card">
+        <h3>✅ تاریخچه حضور و غیاب <span class="tag">F5-AC3 — به تفکیک کلاس</span></h3>
+        <div class="row">
+          <span class="tag dark">گیتار خصوصی:</span>
+          <span class="chip">حاضر ۷</span><span class="chip">غایب ۱</span><span class="chip">موجه ۰</span><span class="chip" style="border-style:dashed">ثبت‌نشده ۰</span>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <span class="tag dark">گیتار گروهی:</span>
+          <span class="chip">حاضر ۴</span><span class="chip">غایب ۰</span><span class="chip">موجه ۱</span><span class="chip" style="border-style:dashed">ثبت‌نشده ۲</span>
+        </div>
+      </div>
+
+      <div class="card" style="border-style:dashed;background:#fafafa">
+        <h3 style="color:var(--faint)">💰 وضعیت مالی و شهریه</h3>
+        <p style="font-size:12.5px;color:var(--faint)">این بخش در MVP-2 اضافه می‌شود (فاکتور، اقساط، بدهی) — جای آن از الان رزرو شده است.</p>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۱: اساتید ═══════════ -->
+    <section class="page" id="page-teachers">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>اساتید</h1>
+        <div class="tags"><span class="tag">F3-AC1..AC4</span></div>
+        <a class="btn primary" style="margin-inline-start:auto" href="#/teacher-form">＋ استاد جدید</a>
+      </header>
+      <div class="card">
+        <div class="row" style="margin-bottom:12px">
+          <input class="inp" style="max-width:300px" placeholder="🔍 جستجو: نام یا شماره تماس…">
+          <label class="checks" style="font-size:12.5px"><input type="checkbox"> نمایش غیرفعال‌ها</label>
+        </div>
+        <div class="tblwrap">
+          <table>
+            <tr><th>نام</th><th>تماس</th><th>ساز(های) تدریسی</th><th>کلاس‌های فعال</th><th>وضعیت</th><th></th></tr>
+            <tr><td><b>استاد کریمی</b></td><td>۰۹۱۲۱۱۱۰۰۰۰</td><td><span class="chip">گیتار</span></td><td>۳ کلاس</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/teacher-form">ویرایش</a></td></tr>
+            <tr><td><b>استاد نوری</b></td><td>۰۹۱۲۲۲۲۰۰۰۰</td><td><span class="chip">پیانو</span> <span class="chip">آواز</span></td><td>۲ کلاس</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/teacher-form">ویرایش</a></td></tr>
+            <tr><td><b>استاد احمدی</b></td><td>۰۹۱۲۳۳۳۰۰۰۰</td><td><span class="chip">ویولن</span></td><td>۱ کلاس</td><td><span class="st on">فعال</span></td><td><a class="btn sm" href="#/teacher-form">ویرایش</a></td></tr>
+            <tr style="opacity:.55"><td><b>استاد مرادی</b></td><td>۰۹۱۲۴۴۴۰۰۰۰</td><td><span class="chip">سنتور</span></td><td>—</td><td><span class="st off">غیرفعال</span></td><td><button class="btn sm">فعال‌سازی</button></td></tr>
+          </table>
+        </div>
+        <div class="note">حذف استاد = Soft Delete (F3-AC4) · استاد دارای کلاس فعال قابل غیرفعال‌سازی نیست مگر با تأیید (کنترل در سرویس)</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۲: فرم استاد ═══════════ -->
+    <section class="page" id="page-teacher-form">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>ثبت / ویرایش استاد</h1>
+        <div class="tags"><span class="tag">F3-AC1</span></div>
+      </header>
+      <div class="card" style="max-width:560px">
+        <div class="fld">
+          <label>نام و نام‌خانوادگی <span class="req">*</span></label>
+          <input class="inp" placeholder="مثلاً: استاد کریمی">
+        </div>
+        <div class="fld">
+          <label>شماره تماس <span class="req">*</span></label>
+          <input class="inp" placeholder="۰۹۱۲ · · · · · · ·">
+        </div>
+        <div class="fld">
+          <label>ساز(های) تدریسی <span class="req">*</span> <span style="color:var(--faint);font-weight:400">(حداقل یکی — چندتایی مجاز)</span></label>
+          <div class="chips">
+            <span class="chip">گیتار <button type="button">×</button></span>
+            <span class="chip">＋ افزودن ساز</span>
+          </div>
+          <p class="hint">سازها از «سازها و اتاق‌ها» تعریف می‌شوند (F3-AC2)</p>
+        </div>
+        <div class="fld">
+          <label>یادداشت</label>
+          <textarea class="inp" rows="2" placeholder="اختیاری…"></textarea>
+        </div>
+        <div class="row">
+          <button class="btn primary">ذخیره</button>
+          <a class="btn" href="#/teachers">انصراف</a>
+        </div>
+        <div class="note" style="margin-bottom:0">حساب کاربری استاد در فاز «پنل استاد» به همین پروفایل وصل می‌شود (تصمیم D4 فاز ۳) — در MVP فرمی برای آن نیست.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۳: ترم‌ها ═══════════ -->
+    <section class="page" id="page-terms">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>ترم‌های تحصیلی</h1>
+        <div class="tags"><span class="tag">F0-AC1..AC3</span></div>
+      </header>
+
+      <div class="grid2" style="align-items:start">
+        <div class="card" style="margin:0">
+          <div class="tblwrap">
+            <table>
+              <tr><th>نام ترم</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th></th></tr>
+              <tr><td><b>پاییز ۱۴۰۵</b></td><td>۱ مهر</td><td>۳۰ دی</td><td><span class="st on">فعال</span></td><td><button class="btn sm" disabled>فعال‌سازی</button></td></tr>
+              <tr><td>تابستان ۱۴۰۵</td><td>۱ تیر</td><td>۳۱ شهریور</td><td><span class="st off">پایان‌یافته</span></td><td><button class="btn sm" disabled>فعال‌سازی</button></td></tr>
+              <tr><td>بهار ۱۴۰۶</td><td>۱ فروردین</td><td>۳۱ خرداد</td><td><span class="st mid">آینده</span></td><td><button class="btn sm">فعال‌سازی</button></td></tr>
+            </table>
+          </div>
+          <div class="note">در هر لحظه حداکثر <b>یک ترم فعال</b> — فعال‌سازی ترم جدید، ترم قبلی را پایان می‌دهد (F0-AC2)</div>
+        </div>
+
+        <div class="card" style="margin:0">
+          <h3>＋ ترم جدید</h3>
+          <div class="fld"><label>نام ترم <span class="req">*</span></label><input class="inp" placeholder="مثلاً: بهار ۱۴۰۶"></div>
+          <div class="grid2">
+            <div class="fld"><label>تاریخ شروع <span class="req">*</span></label><input class="inp" placeholder="۱۴۰۶/۰۱/۰۱"></div>
+            <div class="fld"><label>تاریخ پایان <span class="req">*</span></label><input class="inp" placeholder="۱۴۰۶/۰۳/۳۱"></div>
+          </div>
+          <button class="btn primary">ثبت ترم</button>
+          <div class="note" style="margin-bottom:0">کلاس تکرارشونده جدید فقط روی ترم فعال ساخته می‌شود و جلساتش تا <b>پایان همان ترم</b> تولید می‌شود (F0-AC3 / F4-AC1)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۴: سازها و اتاق‌ها ═══════════ -->
+    <section class="page" id="page-catalog">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>سازها و اتاق‌ها</h1>
+        <div class="tags"><span class="tag">F3-AC2</span></div>
+      </header>
+
+      <div class="grid2" style="align-items:start">
+        <div class="card" style="margin:0">
+          <h3>🎸 سازها / رشته‌های آموزشی</h3>
+          <div class="tblwrap" style="margin-bottom:10px">
+            <table style="min-width:0">
+              <tr><th>نام</th><th>هنرجو</th><th>اساتید</th><th>وضعیت</th><th></th></tr>
+              <tr><td>گیتار</td><td>۱۸</td><td>۱</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr><td>پیانو</td><td>۱۲</td><td>۱</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr><td>ویولن</td><td>۸</td><td>۱</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr><td>آواز</td><td>۶</td><td>۱</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr style="opacity:.55"><td>تنبک</td><td>۴</td><td>۰</td><td><span class="st off">غیرفعال</span></td><td><button class="btn sm">فعال‌سازی</button></td></tr>
+            </table>
+          </div>
+          <div class="row">
+            <input class="inp" style="max-width:200px" placeholder="نام ساز جدید…">
+            <button class="btn primary sm">＋ افزودن</button>
+          </div>
+          <div class="note" style="margin-bottom:0">سازِ دارای هنرجو/کلاس فعال حذف نمی‌شود — فقط غیرفعال (Soft Delete)</div>
+        </div>
+
+        <div class="card" style="margin:0">
+          <h3>🚪 اتاق‌های آموزشگاه</h3>
+          <div class="tblwrap" style="margin-bottom:10px">
+            <table style="min-width:0">
+              <tr><th>نام</th><th>کلاس‌های این هفته</th><th>وضعیت</th><th></th></tr>
+              <tr><td>اتاق ۱</td><td>۹ جلسه</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr><td>اتاق ۲</td><td>۷ جلسه</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr><td>اتاق ۳</td><td>۳ جلسه</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+            </table>
+          </div>
+          <div class="row">
+            <input class="inp" style="max-width:200px" placeholder="نام اتاق جدید…">
+            <button class="btn primary sm">＋ افزودن</button>
+          </div>
+          <div class="note" style="margin-bottom:0">اتاقِ دارای جلسه آینده قابل غیرفعال‌سازی نیست (تداخل برنامه)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۵: تنظیمات ═══════════ -->
+    <section class="page" id="page-settings">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>تنظیمات آموزشگاه</h1>
+      </header>
+
+      <div class="card" style="max-width:640px">
+        <div class="fld">
+          <label>نام آموزشگاه</label>
+          <input class="inp" value="آموزشگاه موسیقی …">
+        </div>
+        <div class="grid2">
+          <div class="fld">
+            <label>ساعت شروع کار <span class="req">*</span></label>
+            <input class="inp" value="۰۹:۰۰">
+          </div>
+          <div class="fld">
+            <label>ساعت پایان کار <span class="req">*</span></label>
+            <input class="inp" value="۲۱:۰۰">
+          </div>
+        </div>
+        <div class="fld">
+          <label>روزهای تعطیل آموزشگاه <span class="req">*</span></label>
+          <div class="checks">
+            <label><input type="checkbox"> شنبه</label>
+            <label><input type="checkbox"> یکشنبه</label>
+            <label><input type="checkbox"> دوشنبه</label>
+            <label><input type="checkbox"> سه‌شنبه</label>
+            <label><input type="checkbox"> چهارشنبه</label>
+            <label><input type="checkbox" checked> پنجشنبه</label>
+            <label><input type="checkbox" checked> جمعه</label>
+          </div>
+        </div>
+        <div class="errbox">
+          <b>⚠️ مورد باز — نیازمند تأیید کارفرما (D7)</b>
+          بین دو سند ناسازگاری هست: پروپوزال §۸ می‌گوید ۱۶:۰۰ تا ۲۱:۰۰، SRS می‌گوید ۰۹:۰۰ تا ۲۱:۰۰. پیش‌فرض فعلی طبق SRS است؛ پس از تأیید نهایی اصلاح شود.
+        </div>
+        <button class="btn primary">ذخیره تنظیمات</button>
+        <div class="note" style="margin-bottom:0">این مقادیر مبنای اعتبارسنجی سمت سرور برای ثبت کلاس‌ها هستند (F4-AC5) — ذخیره‌شده در دیتابیس، نه داخل کد.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۶ (MVP-3): ارسال پیامک ⭐ ═══════════ -->
+    <section class="page" id="page-sms-compose">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>ارسال پیامک</h1>
+        <div class="tags"><span class="tag">MVP-3 · F7-2</span><span class="tag">پیش‌نمایش — خارج از بازبینی MVP-1</span></div>
+      </header>
+
+      <div class="grid2" style="grid-template-columns:1.5fr 1fr;align-items:start">
+        <div>
+          <!-- گام ۱ -->
+          <div class="card">
+            <h3>۱️⃣ گیرندگان</h3>
+            <div class="fld">
+              <label>شیوه انتخاب <span class="req">*</span></label>
+              <div class="seg" id="audtype">
+                <button class="on" type="button">تک‌تک</button>
+                <button type="button">کلاس</button>
+                <button type="button">ساز</button>
+                <button type="button">همه فعال</button>
+                <button type="button">فیلتر هوشمند</button>
+              </div>
+            </div>
+            <div class="fld">
+              <label>انتخاب هنرجو <span style="color:var(--faint);font-weight:400">(جستجو — فقط فعال‌ها، F2-AC8)</span></label>
+              <input class="inp" placeholder="🔍 نام / شماره تماس / کد ملی…">
+              <div class="hint" style="margin:6px 0">انتخاب‌شده‌ها:</div>
+              <div class="chips">
+                <span class="chip">سارا محمدی <button type="button">×</button></span>
+                <span class="chip">نگار حسینی <button type="button">×</button></span>
+                <span class="chip">＋ افزودن</span>
+              </div>
+            </div>
+            <div class="fld">
+              <label>ارسال به کدام شماره؟ <span class="req">*</span></label>
+              <div class="checks">
+                <label><input type="radio" name="ph" checked> شماره خود هنرجو</label>
+                <label><input type="radio" name="ph"> شماره قوم نزدیک</label>
+              </div>
+              <p class="hint">پیش‌فرض از تنظیمات خوانده می‌شود — برای هنرجوهای کم‌سن معمولاً شماره والدین مناسب‌تر است</p>
+            </div>
+          </div>
+
+          <!-- گام ۲ -->
+          <div class="card">
+            <h3>۲️⃣ قالب و متن</h3>
+            <div class="fld">
+              <label>قالب (عنوان) <span class="req">*</span></label>
+              <select class="inp">
+                <option>— متن آزاد (بدون قالب) —</option>
+                <option selected>اطلاع غیبت</option>
+                <option>یادآوری کلاس فردا</option>
+                <option>یادآوری سررسید قسط</option>
+                <option>خوش‌آمدگویی</option>
+              </select>
+              <p class="hint">قالب‌ها در صفحه «قالب‌های پیامک» تعریف می‌شوند (F7-1)</p>
+            </div>
+            <div class="fld">
+              <label>متن پیام <span class="req">*</span> <span style="color:var(--faint);font-weight:400">(قابل ویرایش — قالب فقط نقطه شروع است)</span></label>
+              <textarea class="inp" rows="4">{نام هنرجو} عزیز، امروز در کلاس {نام کلاس} غیبت داشتید. لطفاً برای جلسه جبرانی با آموزشگاه هماهنگ کنید. {نام آموزشگاه}</textarea>
+              <div class="row" style="margin-top:6px">
+                <span style="font-size:11px;color:var(--faint)">درج متغیر:</span>
+                <span class="chip">{نام هنرجو}</span>
+                <span class="chip">{نام کلاس}</span>
+                <span class="chip">{نام استاد}</span>
+                <span class="chip">{روز کلاس}</span>
+                <span class="chip">{ساعت کلاس}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- گام ۳ -->
+          <div class="card">
+            <h3>۳️⃣ پیش‌نمایش و ارسال</h3>
+            <div class="card" style="margin:0;background:#fafafa;border-style:dashed">
+              <p style="font-size:13px">سارا محمدی عزیز، امروز در کلاس گیتار گروهی غیبت داشتید. لطفاً برای جلسه جبرانی با آموزشگاه هماهنگ کنید. آموزشگاه موسیقی …</p>
+              <p style="font-size:11px;color:var(--faint);margin-top:6px">📝 نمونه با داده گیرنده اول — هر گیرنده متن اختصاصی خودش را می‌گیرد (متغیرها جداگانه جایگزین می‌شوند)</p>
+            </div>
+            <div class="errbox" style="margin-top:12px">
+              <b>⚠️ ارسال گروهی به ۲ گیرنده — این عمل قابل بازگشت نیست</b>
+              ۲ گیرنده × ۱ بخش (۷۰ کاراکتر فارسی) · تخمین هزینه بر اساس تعرفه سرویس‌دهنده
+            </div>
+            <div class="row">
+              <button class="btn primary">تأیید و ارسال</button>
+              <button class="btn">ذخیره به‌عنوان قالب جدید</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>🎯 فیلترهای هوشمند</h3>
+            <p style="font-size:12px;color:var(--sub);margin-bottom:8px">وقتی «فیلتر هوشمند» را انتخاب کنی:</p>
+            <div class="tblwrap">
+              <table style="min-width:0">
+                <tr><th>فیلتر</th><th>تعداد</th><th></th></tr>
+                <tr><td>غایبان امروز</td><td>۲</td><td><button class="btn sm">انتخاب</button></td></tr>
+                <tr><td>بدون کلاس فعال</td><td>۳</td><td><button class="btn sm">انتخاب</button></td></tr>
+                <tr style="opacity:.6"><td>بدهکاران 🏷</td><td>—</td><td><span class="tag">نیازمند MVP-2</span></td></tr>
+              </table>
+            </div>
+            <div class="note" style="margin:10px 0 0;font-size:11.5px">تعریف دقیق هر فیلتر در 05-sms-feature.md §۵ — فهرست فیلترها گسترش‌پذیر است</div>
+          </div>
+          <div class="card">
+            <h3>✅ چک‌لیست قبل از ارسال</h3>
+            <ul style="font-size:12px;color:var(--sub);margin-inline-start:16px">
+              <li>گیرندگان بدون شماره معتبر حذف و گزارش می‌شوند (F7-2-AC7)</li>
+              <li>هر ارسال = یک «دسته» با audit کامل (F7-2-AC8)</li>
+              <li>متن نهایی (نه قالب) ذخیره می‌شود — Snapshot</li>
+              <li>وضعیت تحویل بعداً از سرویس‌دهنده همگام می‌شود</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <details class="wnotes">
+        <summary>یادداشت‌های طراحی این صفحه</summary>
+        <ul>
+          <li>سه گام در یک صفحه (نه ویزارد چند مرحله‌ای) — برای ادمین آشنا با سیستم سریع‌تر است.</li>
+          <li><b>پیش‌نمایش با داده واقعی</b> حیاتی است: ادمین باید ببیند متغیرها درست جایگزین می‌شوند.</li>
+          <li>اختصاص «شماره مقصد» (خود هنرجو / قوم نزدیک) به دلیل سن پایین بخشی از هنرجوها.</li>
+          <li>گزینه «ذخیره به‌عنوان قالب جدید» — مسیر سریع برای تبدیل متن ویرایش‌شده به قالب تکرارشونده.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۷ (MVP-3): قالب‌های پیامک ═══════════ -->
+    <section class="page" id="page-sms-templates">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>قالب‌های پیامک</h1>
+        <div class="tags"><span class="tag">MVP-3 · F7-1</span><span class="tag">پیش‌نمایش</span></div>
+      </header>
+
+      <div class="grid2" style="align-items:start">
+        <div class="card" style="margin:0">
+          <div class="tblwrap">
+            <table>
+              <tr><th>عنوان</th><th>متن</th><th>ارسال‌ها</th><th>وضعیت</th><th></th></tr>
+              <tr><td><b>اطلاع غیبت</b></td><td style="max-width:260px">{نام هنرجو} عزیز، امروز در کلاس {نام کلاس} غیبت…</td><td>۳۲</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr><td><b>یادآوری کلاس فردا</b></td><td style="max-width:260px">{نام هنرجو} عزیز، کلاس {نام کلاس} شما فردا {روز کلاس} ساعت…</td><td>۱۲۸</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr><td><b>یادآوری سررسید قسط</b> 🏷</td><td style="max-width:260px">{نام هنرجو} عزیز، قسط {مبلغ} تا {تاریخ سررسید}…</td><td>—</td><td><span class="st on">فعال</span></td><td><button class="btn sm">ویرایش</button></td></tr>
+              <tr style="opacity:.55"><td><b>خوش‌آمدگویی</b></td><td style="max-width:260px">{نام هنرجو} عزیز، به {نام آموزشگاه} خوش آمدید…</td><td>۴۵</td><td><span class="st off">غیرفعال</span></td><td><button class="btn sm">فعال‌سازی</button></td></tr>
+            </table>
+          </div>
+          <div class="note">قالب غیرفعال در لیست ارسال نمایش داده نمی‌شود ولی سابقه پیام‌های قبلی سالم می‌ماند (F7-1-AC4) · 🏷 قالب «سررسید قسط» متغیرهای MVP-2 دارد و بعد از فاز مالی قابل استفاده است</div>
+        </div>
+
+        <div class="card" style="margin:0">
+          <h3>＋ قالب جدید / ویرایش</h3>
+          <div class="fld">
+            <label>عنوان <span class="req">*</span> <span style="color:var(--faint);font-weight:400">(یکتا — مثل «اطلاع غیبت»)</span></label>
+            <input class="inp" placeholder="مثلاً: تعطیلی اضطراری">
+          </div>
+          <div class="fld">
+            <label>متن <span class="req">*</span></label>
+            <textarea class="inp" rows="4" placeholder="متن قالب — متغیرها را با کلیک درج کنید…"></textarea>
+          </div>
+          <div class="fld">
+            <label>متغیرهای قابل درج (کلیک کنید)</label>
+            <div class="chips">
+              <span class="chip">{نام هنرجو}</span>
+              <span class="chip">{نام کلاس}</span>
+              <span class="chip">{نام استاد}</span>
+              <span class="chip">{روز کلاس}</span>
+              <span class="chip">{ساعت کلاس}</span>
+              <span class="chip">{نام آموزشگاه}</span>
+              <span class="chip" style="opacity:.55">{تاریخ سررسید} 🏷</span>
+              <span class="chip" style="opacity:.55">{مبلغ} 🏷</span>
+            </div>
+            <p class="hint">🏷 وابسته به MVP-2 — بعد از فاز مالی فعال می‌شوند</p>
+          </div>
+          <div class="row">
+            <button class="btn primary">ذخیره قالب</button>
+            <button class="btn">انصراف</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ صفحه ۱۸ (MVP-3): تاریخچه پیامک ═══════════ -->
+    <section class="page" id="page-sms-history">
+      <header class="topbar">
+        <button class="btn sm menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>تاریخچه پیامک</h1>
+        <div class="tags"><span class="tag">MVP-3 · F7-3</span><span class="tag">پیش‌نمایش</span></div>
+      </header>
+
+      <div class="card">
+        <div class="row" style="margin-bottom:12px">
+          <input class="inp" style="width:140px" placeholder="از تاریخ">
+          <input class="inp" style="width:140px" placeholder="تا تاریخ">
+          <select class="inp" style="width:auto"><option>همه وضعیت‌ها</option><option>تحویل‌شده</option><option>ناموفق</option></select>
+          <input class="inp" style="max-width:220px" placeholder="🔍 جستجوی هنرجو…">
+          <button class="btn sm ghost" style="margin-inline-start:auto">↻ به‌روزرسانی وضعیت از سرویس‌دهنده</button>
+        </div>
+
+        <div class="tblwrap">
+          <table>
+            <tr><th>تاریخ</th><th>عنوان ارسال</th><th>گیرندگان</th><th>تعداد</th><th>وضعیت</th><th>ارسال‌کننده</th><th></th></tr>
+            <tr>
+              <td>۱۴۰۵/۰۶/۱۲ · ۱۸:۳۰</td><td><b>اطلاع غیبت</b></td><td>غایبان امروز (فیلتر هوشمند)</td><td>۲</td>
+              <td><span class="chip">تحویل ۲</span></td><td>مدیر</td>
+              <td><button class="btn sm">جزئیات</button></td>
+            </tr>
+            <tr>
+              <td>۱۴۰۵/۰۶/۱۱ · ۲۰:۰۰</td><td><b>یادآوری کلاس فردا</b></td><td>کلاس: گیتار گروهی</td><td>۴</td>
+              <td><span class="chip">تحویل ۳</span> <span class="chip" style="border-color:var(--err);color:var(--err)">ناموفق ۱</span></td><td>مدیر</td>
+              <td><button class="btn sm">جزئیات</button> <button class="btn sm">بازارسال ناموفق‌ها</button></td>
+            </tr>
+            <tr>
+              <td>۱۴۰۵/۰۶/۱۰ · ۰۹:۱۵</td><td><b>متن آزاد</b></td><td>تک‌تک: نگار حسینی</td><td>۱</td>
+              <td><span class="chip">تحویل ۱</span></td><td>مدیر</td>
+              <td><button class="btn sm">جزئیات</button></td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="font-size:12px;color:var(--sub);margin:12px 0 6px">▾ نمونه جزئیات باز‌شده:</p>
+        <div class="tblwrap">
+          <table>
+            <tr><th>هنرجو</th><th>شماره ارسال</th><th>مقصد</th><th>وضعیت</th><th>زمان ارسال</th><th>زمان تحویل</th></tr>
+            <tr><td>سارا محمدی</td><td>۰۹۱۲••••۴۵۶۷</td><td><span class="tag">خود هنرجو</span></td><td><span class="st on">تحویل</span></td><td>۲۰:۰۰:۰۳</td><td>۲۰:۰۰:۱۱</td></tr>
+            <tr><td>علی رضایی</td><td>۰۹۳۵••••۱۲۳۳</td><td><span class="tag">خود هنرجو</span></td><td><span class="st on">تحویل</span></td><td>۲۰:۰۰:۰۳</td><td>۲۰:۰۰:۱۵</td></tr>
+            <tr><td>نگار حسینی</td><td>۰۹۱۹••••۵۴۳۲</td><td><span class="tag">خود هنرجو</span></td><td><span class="st on">تحویل</span></td><td>۲۰:۰۰:۰۳</td><td>۲۰:۰۰:۱۰</td></tr>
+            <tr><td>مهدی توکلی</td><td>۰۹۱۲••••۴۴۵۵</td><td><span class="tag">قوم نزدیک</span></td><td><span class="st off">ناموفق</span></td><td>۲۰:۰۰:۰۳</td><td>— <small style="color:var(--err)">(شماره خاموش / خارج از دسترس)</small></td></tr>
+          </table>
+        </div>
+
+        <div class="note">هر سطر تاریخچه = یک «دسته ارسال» (حتی ارسال تک‌نفره) · در پروفایل هر هنرجو هم تاریخچه پیامک‌های خودش نمایش داده می‌شود (F7-3-AC5)</div>
+      </div>
+
+      <div class="card" style="border-style:dashed">
+        <div class="between" style="margin-bottom:12px">
+          <h3 style="margin:0">🔌 اتصال سرویس‌دهنده <span class="tag">F7-4 · پیش‌نمایش</span></h3>
+          <span class="tag">غیرفعال تا شروع MVP-3</span>
+        </div>
+        <div class="grid3">
+          <div class="fld" style="margin:0">
+            <label>سرویس‌دهنده</label>
+            <select class="inp" disabled>
+              <option>— در فاز MVP-3 انتخاب می‌شود —</option>
+              <option>کاوه‌نگار</option>
+              <option>قاصدک</option>
+              <option>ملی‌پیامک</option>
+            </select>
+          </div>
+          <div class="fld" style="margin:0">
+            <label>شماره خط ارسال</label>
+            <input class="inp" disabled placeholder="مثلاً: ۱۰۰۰••••">
+          </div>
+          <div class="fld" style="margin:0">
+            <label>API Key</label>
+            <input class="inp" disabled type="password" value="••••••••••••">
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" disabled>تست اتصال و ارسال آزمایشی</button>
+          <span class="tag">موجودی: — (بعد از اتصال نمایش داده می‌شود)</span>
+        </div>
+        <div class="note" style="margin:10px 0 0">🔐 API Key فقط سمت سرور ذخیره می‌شود؛ در رابط کاربری همیشه ماسک است (F7-4-AC4) · طراحی مستقل از سرویس‌دهنده با الگوی Adapter — 05-sms-feature.md §۶</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════ مودال جزئیات جلسه (تقویم) ═══════════ -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="box">
+    <h3>گیتار — خصوصی</h3>
+    <div class="meta">
+      شنبه ۱۲ مهر ۱۴۰۵ · ۱۰:۰۰–۱۱:۰۰<br>
+      اتاق ۱ · استاد کریمی · هنرجو: سارا محمدی<br>
+      سری: «گیتار خصوصی — شنبه‌ها ۱۰:۰۰» · جلسه ۳ از ۱۴
+    </div>
+    <div class="acts">
+      <a class="btn primary" href="#/session" onclick="closeModal()">✅ ثبت حضور و غیاب</a>
+      <button class="btn" onclick="closeModal()">✏️ ویرایش این جلسه</button>
+      <button class="btn" onclick="closeModal()">✖ لغو این جلسه</button>
+    </div>
+    <p style="font-size:10.5px;color:var(--faint);margin-top:12px">F4-AC7 — اقدامات فقط روی همین جلسه؛ سری هفتگی دست‌نخورده می‌ماند.</p>
+  </div>
+</div>
+
+<script>
+/* ─── مسیریابی هش ─── */
+function router(){
+  var name=(location.hash||'#/cover').replace(/^#\/?/,'')||'cover';
+  var p=document.getElementById('page-'+name)||document.getElementById('page-cover');
+  document.querySelectorAll('.page').forEach(function(el){el.classList.remove('on')});
+  p.classList.add('on');
+  var bare=(name==='cover'||name==='login');
+  document.getElementById('chrome').style.display=bare?'none':'grid';
+  document.querySelectorAll('.nav a').forEach(function(a){
+    a.classList.toggle('act',a.getAttribute('href')==='#/'+name);
+  });
+  document.getElementById('sidebar').classList.remove('open');
+  closeModal();
+  window.scrollTo(0,0);
+}
+function openModal(){document.getElementById('modal').classList.add('on')}
+function closeModal(){document.getElementById('modal').classList.remove('on')}
+function setSched(weekly){
+  document.getElementById('fs-weekly').style.display=weekly?'block':'none';
+  document.getElementById('adhoc-note').style.display=weekly?'none':'block';
+}
+/* سوییچ‌های عمومی (بدون عملکرد — فقط نمایشی) */
+document.querySelectorAll('.seg').forEach(function(seg){
+  if(seg.id==='schedtype')return;
+  seg.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click',function(){
+      seg.querySelectorAll('button').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on');
+    });
+  });
+});
+window.addEventListener('hashchange',router);
+router();
+</script>
+</body>
+</html>

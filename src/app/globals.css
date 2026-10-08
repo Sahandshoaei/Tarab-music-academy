@@ -1,0 +1,125 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── پالت کرم-گردویی-طلایی — مطابق طراحی جدید ── */
+:root {
+  --background: oklch(0.972 0.012 77);       /* کرم #FAF6F0 */
+  --foreground: oklch(0.245 0.025 62);       /* گردویی تیره #2A2118 */
+  --card: oklch(1 0 0);                      /* سفید #FFFFFF */
+  --card-foreground: oklch(0.245 0.025 62);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.245 0.025 62);
+  --primary: oklch(0.478 0.097 61);          /* گردویی #8B5A2B */
+  --primary-foreground: oklch(0.99 0.01 77);
+  --primary-light: oklch(0.61 0.078 62);     /* گردویی روشن #A67C52 */
+  --secondary: oklch(0.92 0.01 74);          /* خاکستری گرم */
+  --secondary-foreground: oklch(0.245 0.025 62);
+  --accent: oklch(0.698 0.12 78);            /* طلایی قدیمی #C89B3C */
+  --accent-foreground: oklch(0.245 0.025 62);
+  --muted: oklch(0.92 0.01 74);
+  --muted-foreground: oklch(0.573 0.025 65); /* #8B7E70 */
+  --border: oklch(0.896 0.015 73);           /* #E8E0D5 */
+  --input: oklch(0.896 0.015 73);
+  --ring: oklch(0.478 0.097 61);
+  --success: oklch(0.56 0.105 131);          /* زیتونی #5C8A4A */
+  --destructive: oklch(0.55 0.155 31);       /* آجری #B34A3C */
+  --destructive-foreground: oklch(0.99 0.01 77);
+  --warning: oklch(0.65 0.17 56);            /* کهربایی #D97706 */
+  --radius: 0.75rem;
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.245 0.025 62);
+  --sidebar-primary: oklch(0.478 0.097 61);
+  --sidebar-primary-foreground: oklch(0.99 0.01 77);
+  --sidebar-accent: oklch(0.972 0.012 77);
+  --sidebar-accent-foreground: oklch(0.245 0.025 62);
+  --sidebar-border: oklch(0.896 0.015 73);
+  --sidebar-ring: oklch(0.478 0.097 61);
+}
+
+.dark {
+  --background: oklch(0.198 0.014 55);       /* گردویی شب #1A1614 */
+  --foreground: oklch(0.97 0.012 77);
+  --card: oklch(0.257 0.022 66);             /* #252019 */
+  --card-foreground: oklch(0.97 0.012 77);
+  --popover: oklch(0.257 0.022 66);
+  --popover-foreground: oklch(0.97 0.012 77);
+  --primary: oklch(0.698 0.12 78);           /* طلایی درخشان #C89B3C */
+  --primary-foreground: oklch(0.198 0.014 55);
+  --primary-light: oklch(0.755 0.105 82);
+  --secondary: oklch(0.257 0.022 66);
+  --secondary-foreground: oklch(0.97 0.012 77);
+  --accent: oklch(0.755 0.105 82);           /* #D4AF61 */
+  --accent-foreground: oklch(0.198 0.014 55);
+  --muted: oklch(0.27 0.02 66);
+  --muted-foreground: oklch(0.70 0.02 65);
+  --border: oklch(0.32 0.02 66);
+  --input: oklch(0.32 0.02 66);
+  --ring: oklch(0.698 0.12 78);
+  --sidebar: oklch(0.22 0.02 60);
+  --sidebar-foreground: oklch(0.97 0.012 77);
+  --sidebar-primary: oklch(0.698 0.12 78);
+  --sidebar-primary-foreground: oklch(0.198 0.014 55);
+  --sidebar-accent: oklch(0.27 0.02 66);
+  --sidebar-accent-foreground: oklch(0.97 0.012 77);
+  --sidebar-border: oklch(0.32 0.02 66);
+  --sidebar-ring: oklch(0.698 0.12 78);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-vazirmatn), system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* اسکرول‌بار گرم */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

@@ -1,0 +1,15 @@
+# ─── انتخاب Registry — این فایل را به .npmrc تغییر نام دهید و یکی را از کامنت خارج کنید ───
+
+# آینه چینی Alibaba — معمولاً از ایران سریع و پایدار (پیشنهاد وقتی آینه ایرانی کند است)
+# registry=https://registry.npmmirror.com
+
+# رجیستری رسمی npm
+# registry=https://registry.npmjs.org
+
+# آینه ایرانی parmincloud
+# registry=https://npm.parmincloud.ir
+
+# ─── مقاومت شبکه (برای اینترنت کند — اختیاری) ───
+# fetch-retries=5
+# fetch-retry-mintimeout=20000
+# fetch-timeout=300000
